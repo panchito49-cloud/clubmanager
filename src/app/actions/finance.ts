@@ -714,6 +714,6 @@ export async function voidChargeAction(formData: FormData): Promise<void> {
   });
 }
 
-export function currentBillingPeriod(): string {
+export async function currentBillingPeriod(): Promise<string> {
   return currentPeriod();
 }
