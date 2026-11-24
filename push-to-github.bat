@@ -3,41 +3,33 @@ setlocal
 cd /d "D:\000_SaaS\clubmanager"
 
 echo ========================================================
-echo ClubManager - Subida a GitHub (panchito49-cloud/clubmanager)
+echo ClubManager - Subida a GitHub
 echo ========================================================
 
-where git >nul 2>&1
-if %ERRORLEVEL% NEQ 0 (
-    echo.
-    echo [AVISO] No se encontro Git instalado en esta consola.
-    echo Si todavia no tienes Git, descargalo e instalalo desde:
-    echo https://git-scm.com/download/win
-    echo.
-    pause
-    exit /b 1
-)
+REM Configurar safe.directory para evitar el bloqueo de propiedad de Windows
+"C:\Program Files\Git\cmd\git.exe" config --global --add safe.directory "D:/000_SaaS/clubmanager"
 
 if not exist .git (
     echo Inicializando repositorio...
-    git init
-    git branch -M main
+    "C:\Program Files\Git\cmd\git.exe" init
+    "C:\Program Files\Git\cmd\git.exe" branch -M main
 )
 
-echo Agregando archivos del proyecto...
-git add .
+echo Preparando archivos...
+"C:\Program Files\Git\cmd\git.exe" add .
 
-echo Creando commit inicial...
-git commit -m "feat: MVP ClubManager completo - Multitenant, Mercado Pago, WhatsApp, Netlify"
+echo Creando commit...
+"C:\Program Files\Git\cmd\git.exe" commit -m "feat: MVP ClubManager - Next.js, Multitenant, Mercado Pago, WhatsApp, Netlify"
 
-git remote remove origin >nul 2>&1
-git remote add origin https://github.com/panchito49-cloud/clubmanager.git
+"C:\Program Files\Git\cmd\git.exe" remote remove origin >nul 2>&1
+"C:\Program Files\Git\cmd\git.exe" remote add origin https://github.com/panchito49-cloud/clubmanager.git
 
 echo.
-echo Subiendo cambios a https://github.com/panchito49-cloud/clubmanager ...
-git push -u origin main
+echo Subiendo a GitHub...
+"C:\Program Files\Git\cmd\git.exe" push -u origin main
 
 echo.
 echo ========================================================
-echo Todo listo! Repositorio actualizado con exito.
+echo Terminado. Verifica arriba si se realizo el push correctamente.
 echo ========================================================
 pause
