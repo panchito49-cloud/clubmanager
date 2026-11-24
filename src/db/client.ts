@@ -43,8 +43,16 @@ function createDatabase(): Database {
     }) as unknown as Database;
   }
 
-  const dir = path.resolve(process.cwd(), process.env.PGLITE_DIR ?? ".data/pglite");
-  fs.mkdirSync(dir, { recursive: true });
+  // En entornos serverless (Netlify, Vercel, AWS Lambda) el sistema de archivos
+  // raiz es de solo lectura; usamos /tmp si no hay DATABASE_URL configurada.
+  const defaultDir = process.env.NODE_ENV === "production" ? "/tmp/clubmanager-pglite" : ".data/pglite";
+  const rawDir = process.env.PGLITE_DIR ?? defaultDir;
+  const dir = path.isAbsolute(rawDir) ? rawDir : path.resolve(process.cwd(), rawDir);
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+  } catch (err) {
+    console.warn("Could not create pglite directory:", dir, err);
+  }
 
   const client = new PGlite(dir);
 
