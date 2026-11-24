@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-brand-50: #eefaf6;
+  --color-brand-100: #d5f3e8;
+  --color-brand-200: #ade6d4;
+  --color-brand-300: #79d2ba;
+  --color-brand-400: #45b89e;
+  --color-brand-500: #1f9a82;
+  --color-brand-600: #0f7c69;
+  --color-brand-700: #0d6355;
+  --color-brand-800: #0c4f45;
+  --color-brand-900: #0a423a;
+
+  --color-ink-50: #f6f7f9;
+  --color-ink-100: #eceef2;
+  --color-ink-200: #d5dae3;
+  --color-ink-300: #b0b9c8;
+  --color-ink-400: #8492a6;
+  --color-ink-500: #64748b;
+  --color-ink-600: #4e5b6d;
+  --color-ink-700: #3d4757;
+  --color-ink-800: #2a3240;
+  --color-ink-900: #1b2230;
+  --color-ink-950: #0c1320;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-ink-200);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-ink-50);
+    color: var(--color-ink-900);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  ::selection {
+    background-color: var(--color-brand-200);
+  }
+
+  /* Scrollbar discreto y consistente */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-300) transparent;
+  }
+}
+
+@layer utilities {
+  .card-surface {
+    background-color: white;
+    border: 1px solid var(--color-ink-200);
+    border-radius: 0.875rem;
+  }
+
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    box-shadow:
+      0 0 0 2px white,
+      0 0 0 4px var(--color-brand-500);
+  }
+
+  .money {
+    font-variant-numeric: tabular-nums;
+  }
+}

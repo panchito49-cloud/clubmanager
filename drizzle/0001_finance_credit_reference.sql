@@ -1,0 +1,2 @@
+ALTER TABLE "payments" ADD COLUMN "credit_cents" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "payments_club_reference_uq" ON "payments" USING btree ("club_id","reference") WHERE reference is not null and status <> 'rejected';
