@@ -43,7 +43,11 @@ export default async function PlayersPage({
     <div>
       <PageHeader
         title="Jugadores"
-        description="Fichas de jugadores del club, categoría y estado de cuenta."
+        description={
+          ctx.role === "club_admin"
+            ? "Fichas de jugadores del club, categoría y estado de cuenta."
+            : "Plantel de jugadores en tus categorías de básquetbol asignadas."
+        }
         actions={
           can(ctx, "players.manage") ? (
             <div className="flex items-center gap-2">
@@ -62,7 +66,9 @@ export default async function PlayersPage({
 
       <div className="mb-4 grid gap-3 sm:grid-cols-4">
         <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Total Jugadores</span>
+          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">
+            {ctx.role === "club_admin" ? "Total Jugadores" : "Jugadores en Plantel"}
+          </span>
           <span className="mt-1 block text-2xl font-bold text-ink-950">{result.total}</span>
           <span className="mt-0.5 block text-xs text-ink-500">Padrón de deportistas</span>
         </div>
@@ -71,15 +77,33 @@ export default async function PlayersPage({
           <span className="mt-1 block text-2xl font-bold text-ink-950">{categories.length}</span>
           <span className="mt-0.5 block text-xs text-red-600 font-medium">Básquet Masc. y Fem.</span>
         </div>
-        <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
-          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Estado de Cuotas</span>
-          <span className="mt-1 block text-2xl font-bold text-emerald-600">
-            {result.rows.filter(r => r.debtCents === 0).length} al día
-          </span>
-          <span className="mt-0.5 block text-xs text-ink-500">
-            {result.rows.filter(r => r.debtCents > 0).length} con saldo pendiente
-          </span>
-        </div>
+        {ctx.role === "club_admin" ? (
+          <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Estado de Cuotas</span>
+            <span className="mt-1 block text-2xl font-bold text-emerald-600">
+              {result.rows.filter((r) => r.debtCents === 0).length} al día
+            </span>
+            <span className="mt-0.5 block text-xs text-ink-500">
+              {result.rows.filter((r) => r.debtCents > 0).length} con saldo pendiente
+            </span>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+            <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Aptos Médicos</span>
+            <span className="mt-1 block text-2xl font-bold text-emerald-600">
+              {result.rows.filter((r) => {
+                const med = getMedicalCertificateInfo(r.medicalCertificateExpiresAt);
+                return med.status === "valid";
+              }).length} vigentes
+            </span>
+            <span className="mt-0.5 block text-xs text-amber-600 font-medium">
+              {result.rows.filter((r) => {
+                const med = getMedicalCertificateInfo(r.medicalCertificateExpiresAt);
+                return med.status !== "valid";
+              }).length} a revisar / vencidos
+            </span>
+          </div>
+        )}
         <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
           <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Sede Principal</span>
           <span className="mt-1 block text-lg font-bold text-ink-950 truncate">Mercedes (B)</span>
@@ -208,12 +232,18 @@ export default async function PlayersPage({
                     </TD>
                     <TD>
                       {player.familyId ? (
-                        <Link
-                          href={`/app/familias/${player.familyId}`}
-                          className="text-ink-700 hover:text-brand-700 hover:underline"
-                        >
-                          {player.familyName ?? "Ver familia"}
-                        </Link>
+                        ctx.role === "club_admin" ? (
+                          <Link
+                            href={`/app/familias/${player.familyId}`}
+                            className="text-ink-700 hover:text-brand-700 hover:underline"
+                          >
+                            {player.familyName ?? "Ver familia"}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-ink-700 font-medium">
+                            {player.familyName ?? "Familia"}
+                          </span>
+                        )
                       ) : (
                         <span className="text-xs text-ink-400">Sin familia</span>
                       )}
