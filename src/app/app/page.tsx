@@ -39,9 +39,19 @@ export default async function DashboardPage() {
   }
 
   const isStaff = ctx.role === "club_admin" || ctx.role === "coach";
+  const isAdmin = ctx.role === "club_admin";
 
   const [finance, counts, events, announcements, unread] = await Promise.all([
-    getFinanceSummary(ctx),
+    isAdmin ? getFinanceSummary(ctx) : Promise.resolve({
+      period: "",
+      billedCents: 0,
+      collectedCents: 0,
+      outstandingCents: 0,
+      overdueCents: 0,
+      overdueCount: 0,
+      declaredCount: 0,
+      declaredCents: 0,
+    }),
     getCounts(ctx),
     getUpcomingEvents(ctx),
     getRecentAnnouncements(ctx),
@@ -49,9 +59,9 @@ export default async function DashboardPage() {
   ]);
 
   const trend =
-    ctx.role === "club_admin" ? await getCollectionTrend(ctx, 6) : [];
+    isAdmin ? await getCollectionTrend(ctx, 6) : [];
   const debtors =
-    ctx.role === "club_admin" ? await getTopDebtors(ctx, 5) : [];
+    isAdmin ? await getTopDebtors(ctx, 5) : [];
 
   const collectionRate =
     finance.billedCents > 0
@@ -72,7 +82,7 @@ export default async function DashboardPage() {
     <div>
       <PageHeader
         title={`${greeting}, ${firstName}`}
-        description={`${ctx.club.name} · ${roleLabel(ctx.role)} · ${monthLabel(finance.period)}`}
+        description={`${ctx.club.name} · ${roleLabel(ctx.role)}${isAdmin ? ` · ${monthLabel(finance.period)}` : ""}`}
         actions={
           can(ctx, "fees.manage") ? (
             <>
@@ -83,6 +93,15 @@ export default async function DashboardPage() {
                 Ver pagos
               </ButtonLink>
             </>
+          ) : ctx.role === "coach" ? (
+            <div className="flex items-center gap-2">
+              <ButtonLink href="/app/asistencias" size="sm" variant="secondary">
+                <Icon name="check" size={14} /> Tomar Asistencia
+              </ButtonLink>
+              <ButtonLink href="/app/partidos" size="sm">
+                <Icon name="trophy" size={14} /> Ver Fixture
+              </ButtonLink>
+            </div>
           ) : can(ctx, "payments.declare") ? (
             <ButtonLink href="/app/cuotas" size="sm">
               Ver mis cuotas
@@ -104,7 +123,7 @@ export default async function DashboardPage() {
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {isStaff ? (
+        {isAdmin ? (
           <>
             <StatCard
               label="Jugadores activos"
@@ -136,6 +155,38 @@ export default async function DashboardPage() {
               href="/app/pagos?estado=declared"
               accent={finance.declaredCount > 0 ? "warning" : "neutral"}
               icon={<Icon name="receipt" />}
+            />
+          </>
+        ) : ctx.role === "coach" ? (
+          <>
+            <StatCard
+              label="Jugadores en tu plantel"
+              value={counts.activePlayers}
+              hint="Jugadores en tus categorías asignadas"
+              href="/app/jugadores"
+              icon={<Icon name="users" />}
+            />
+            <StatCard
+              label="Asistencia a entrenamientos"
+              value="Gestión Rápida"
+              hint="Tomar lista desde el celular"
+              href="/app/asistencias"
+              accent="brand"
+              icon={<Icon name="check" />}
+            />
+            <StatCard
+              label="Partidos y Fixture"
+              value="Fixture Oficial"
+              hint="Convocatorias y tanteador final"
+              href="/app/partidos"
+              icon={<Icon name="trophy" />}
+            />
+            <StatCard
+              label="Próximos eventos"
+              value={events.length}
+              hint="Entrenamientos y partidos agendados"
+              href="/app/calendario"
+              icon={<Icon name="calendar" />}
             />
           </>
         ) : (
@@ -175,7 +226,7 @@ export default async function DashboardPage() {
         )}
       </div>
 
-      {isStaff ? (
+      {isAdmin ? (
         <div className="mt-3 grid gap-3 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader

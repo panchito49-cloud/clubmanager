@@ -23,17 +23,17 @@ export const CLUB_NAV: NavSection[] = [
     title: "Gestión",
     items: [
       { href: "/app", label: "Panel", icon: "grid", permission: "club.view", exact: true },
-      { href: "/app/portal", label: "Portal familiar", icon: "shield", permission: "club.view" },
+      { href: "/app/portal", label: "Portal familiar", icon: "shield", permission: "fees.view" },
       { href: "/app/jugadores", label: "Jugadores", icon: "users", permission: "players.view", module: "jugadores" },
-      { href: "/app/familias", label: "Familias", icon: "home", permission: "families.view", module: "jugadores" },
-      { href: "/app/categorias", label: "Categorías", icon: "layers", permission: "categories.manage", module: "jugadores" },
+      { href: "/app/familias", label: "Familias", icon: "home", permission: "families.view", module: "jugadores", adminOnly: true },
+      { href: "/app/categorias", label: "Categorías", icon: "layers", permission: "categories.manage", module: "jugadores", adminOnly: true },
     ],
   },
   {
     title: "Economía",
     items: [
-      { href: "/app/cuotas", label: "Cuotas", icon: "wallet", permission: "fees.view", module: "cuotas" },
-      { href: "/app/pagos", label: "Pagos", icon: "receipt", permission: "fees.view", module: "cuotas" },
+      { href: "/app/cuotas", label: "Cuotas", icon: "wallet", permission: "fees.view", module: "cuotas", adminOnly: true },
+      { href: "/app/pagos", label: "Pagos", icon: "receipt", permission: "fees.view", module: "cuotas", adminOnly: true },
     ],
   },
   {
@@ -49,7 +49,7 @@ export const CLUB_NAV: NavSection[] = [
     title: "Comunicación",
     items: [
       { href: "/app/comunicaciones", label: "Comunicaciones", icon: "megaphone", permission: "comms.view", module: "comunicaciones" },
-      { href: "/app/reportes", label: "Reportes", icon: "chart", permission: "reports.view", module: "reportes" },
+      { href: "/app/reportes", label: "Reportes", icon: "chart", permission: "reports.view", module: "reportes", adminOnly: true },
     ],
   },
   {

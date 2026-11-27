@@ -91,14 +91,16 @@ export default async function PlayerDetailPage({
 
       <Flash ok={ok} />
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Deuda pendiente"
-          value={formatMoney(debt)}
-          hint={`${data.charges.filter((c) => c.paidCents < c.totalCents).length} cuota(s) con saldo`}
-          accent={debt > 0 ? "danger" : "success"}
-          href="/app/cuotas"
-        />
+      <div className={`grid gap-3 ${ctx.role === "club_admin" ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
+        {ctx.role === "club_admin" && (
+          <StatCard
+            label="Deuda pendiente"
+            value={formatMoney(debt)}
+            hint={`${data.charges.filter((c) => c.paidCents < c.totalCents).length} cuota(s) con saldo`}
+            accent={debt > 0 ? "danger" : "success"}
+            href="/app/cuotas"
+          />
+        )}
         <StatCard
           label="Asistencia reciente"
           value={data.attendanceRate !== null ? `${data.attendanceRate}%` : "—"}
@@ -268,43 +270,45 @@ export default async function PlayerDetailPage({
         </Card>
       ) : null}
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <Card className="overflow-hidden">
-          <CardHeader title="Últimas cuotas" action={<Link href="/app/cuotas" className="text-xs font-medium text-brand-700 hover:underline">Ver todas</Link>} />
-          {data.charges.length === 0 ? (
-            <p className="px-5 py-8 text-center text-sm text-ink-400">
-              Todavía no hay cuotas generadas.
-            </p>
-          ) : (
-            <Table minWidth="min-w-[520px]">
-              <THead>
-                <TR>
-                  <TH>Concepto</TH>
-                  <TH>Vencimiento</TH>
-                  <TH align="right">Total</TH>
-                  <TH>Estado</TH>
-                </TR>
-              </THead>
-              <TBody>
-                {data.charges.slice(0, 8).map((charge) => (
-                  <TR key={charge.id}>
-                    <TD className="text-xs">
-                      {charge.concept}
-                      <span className="block text-ink-400">{charge.period}</span>
-                    </TD>
-                    <TD className="whitespace-nowrap text-xs">{formatDate(charge.dueDate)}</TD>
-                    <TD align="right" className="money text-xs">
-                      {formatMoney(charge.totalCents)}
-                    </TD>
-                    <TD>
-                      <StatusBadge meta={chargeStatusMeta[charge.status]} />
-                    </TD>
+      <div className={`mt-3 grid gap-3 ${ctx.role === "club_admin" ? "lg:grid-cols-2" : "grid-cols-1"}`}>
+        {ctx.role === "club_admin" && (
+          <Card className="overflow-hidden">
+            <CardHeader title="Últimas cuotas" action={<Link href="/app/cuotas" className="text-xs font-medium text-brand-700 hover:underline">Ver todas</Link>} />
+            {data.charges.length === 0 ? (
+              <p className="px-5 py-8 text-center text-sm text-ink-400">
+                Todavía no hay cuotas generadas.
+              </p>
+            ) : (
+              <Table minWidth="min-w-[520px]">
+                <THead>
+                  <TR>
+                    <TH>Concepto</TH>
+                    <TH>Vencimiento</TH>
+                    <TH align="right">Total</TH>
+                    <TH>Estado</TH>
                   </TR>
-                ))}
-              </TBody>
-            </Table>
-          )}
-        </Card>
+                </THead>
+                <TBody>
+                  {data.charges.slice(0, 8).map((charge) => (
+                    <TR key={charge.id}>
+                      <TD className="text-xs">
+                        {charge.concept}
+                        <span className="block text-ink-400">{charge.period}</span>
+                      </TD>
+                      <TD className="whitespace-nowrap text-xs">{formatDate(charge.dueDate)}</TD>
+                      <TD align="right" className="money text-xs">
+                        {formatMoney(charge.totalCents)}
+                      </TD>
+                      <TD>
+                        <StatusBadge meta={chargeStatusMeta[charge.status]} />
+                      </TD>
+                    </TR>
+                  ))}
+                </TBody>
+              </Table>
+            )}
+          </Card>
+        )}
 
         <Card className="overflow-hidden">
           <CardHeader title="Asistencia a entrenamientos" />

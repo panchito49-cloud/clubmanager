@@ -173,7 +173,7 @@ export default async function PlayersPage({
                   <TH>Edad</TH>
                   <TH>Apto Médico</TH>
                   <TH>Estado</TH>
-                  <TH align="right">Deuda</TH>
+                  {ctx.role === "club_admin" && <TH align="right">Deuda</TH>}
                   <TH align="right">Acciones</TH>
                 </TR>
               </THead>
@@ -251,15 +251,17 @@ export default async function PlayersPage({
                     <TD>
                       <StatusBadge meta={playerStatusMeta[player.status]} />
                     </TD>
-                    <TD align="right">
-                      {player.debtCents > 0 ? (
-                        <span className="money font-medium text-rose-600">
-                          {formatMoney(player.debtCents)}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-emerald-600">Al día</span>
-                      )}
-                    </TD>
+                    {ctx.role === "club_admin" && (
+                      <TD align="right">
+                        {player.debtCents > 0 ? (
+                          <span className="money font-medium text-rose-600">
+                            {formatMoney(player.debtCents)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-emerald-600">Al día</span>
+                        )}
+                      </TD>
+                    )}
                     <TD align="right" className="space-x-2 whitespace-nowrap">
                       <Link
                         href={`/app/jugadores/${player.id}/carnet`}

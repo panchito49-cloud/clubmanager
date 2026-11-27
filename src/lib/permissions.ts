@@ -44,7 +44,6 @@ const ADMIN_PERMISSIONS: Permission[] = [...PERMISSIONS];
 const COACH_PERMISSIONS: Permission[] = [
   "club.view",
   "players.view",
-  "families.view",
   "trainings.view",
   "trainings.manage",
   "attendance.record",
@@ -54,13 +53,10 @@ const COACH_PERMISSIONS: Permission[] = [
   "trips.view",
   "comms.view",
   "comms.send",
-  "reports.view",
 ];
 
 const GUARDIAN_PERMISSIONS: Permission[] = [
   "club.view",
-  "players.view",
-  "families.view",
   "fees.view",
   "payments.declare",
   "trainings.view",
