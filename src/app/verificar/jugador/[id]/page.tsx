@@ -124,7 +124,7 @@ export default async function PublicVerifyPlayerPage({
           </div>
 
           <div className="mt-6 text-center text-xs text-slate-500">
-            Verificación generada en tiempo real por el sistema ClubManager para Club Atlético Estudiantes de Mercedes.
+            Verificación generada en tiempo real por el sistema Nuestro Club para Club Atlético Estudiantes de Mercedes.
           </div>
         </div>
       </div>

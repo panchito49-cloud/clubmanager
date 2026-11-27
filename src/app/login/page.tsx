@@ -52,7 +52,7 @@ export default async function LoginPage({
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold text-white">
               CM
             </span>
-            <span className="text-sm font-semibold text-ink-900">ClubManager</span>
+            <span className="text-sm font-semibold text-ink-900">Nuestro Club</span>
           </Link>
         </div>
       </header>

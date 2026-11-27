@@ -24,7 +24,7 @@ export default async function ImportPlayersPage() {
         actions={
           <a
             href="/api/plantilla-jugadores"
-            download="plantilla_jugadores_clubmanager.csv"
+            download="plantilla_jugadores_nuestroclub.csv"
             className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-800 shadow-sm transition hover:bg-ink-50"
           >
             <Icon name="download" size={15} /> Descargar plantilla CSV

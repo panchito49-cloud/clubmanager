@@ -36,7 +36,7 @@ export default async function PaymentReceiptPage({
     )} correspondiente a las cuotas del básquetbol formativo. ¡Muchas gracias por el compromiso con el club!`,
   );
 
-  const verificationUrl = `https://estudiantesmercedes.clubmanager.app/recibo/${payment.id}`;
+  const verificationUrl = `https://estudiantesmercedes.nuestroclub.com.ar/recibo/${payment.id}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&margin=0&data=${encodeURIComponent(
     verificationUrl,
   )}`;
@@ -249,7 +249,7 @@ export default async function PaymentReceiptPage({
 
         {/* Franja Centenario al pie */}
         <div className="mt-8 pt-3 border-t border-ink-100 flex items-center justify-between text-[10px] text-ink-400">
-          <span>ClubManager · Software de Gestión Deportiva</span>
+          <span>Nuestro Club · Software de Gestión Deportiva</span>
           <span>1926 — 2026 · 100 Años de Pasión y Deporte en Mercedes</span>
         </div>
       </div>

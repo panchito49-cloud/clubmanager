@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "ClubManager · Gestión integral de clubes",
-    template: "%s · ClubManager",
+    default: "Nuestro Club · Gestión integral de clubes",
+    template: "%s · Nuestro Club",
   },
   description:
     "Plataforma para administrar jugadores, familias, cuotas, cobranzas y actividad deportiva de clubes de básquet.",

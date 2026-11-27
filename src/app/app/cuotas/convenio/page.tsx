@@ -145,7 +145,7 @@ export default async function PaymentPlanAgreementPage({
               TERCERA — Cronograma de Pagos y Vencimientos
             </h3>
             <p className="mt-1">
-              Las cuotas del plan han quedado devengadas en el sistema de autogestión ClubManager del club. El pago podrá efectuarse mediante efectivo en tesorería, transferencia bancaria institucional o la plataforma digital de Mercado Pago.
+              Las cuotas del plan han quedado devengadas en el sistema de autogestión Nuestro Club del club. El pago podrá efectuarse mediante efectivo en tesorería, transferencia bancaria institucional o la plataforma digital de Mercado Pago.
             </p>
           </div>
 
@@ -178,7 +178,7 @@ export default async function PaymentPlanAgreementPage({
         </div>
 
         <div className="mt-8 pt-4 border-t border-ink-100 flex items-center justify-between text-[10px] text-ink-400">
-          <span>ClubManager · Módulo de Inteligencia de Cobranzas</span>
+          <span>Nuestro Club · Módulo de Inteligencia de Cobranzas</span>
           <span>1926 — 2026 · Centenario Club Atlético Estudiantes de Mercedes</span>
         </div>
       </div>

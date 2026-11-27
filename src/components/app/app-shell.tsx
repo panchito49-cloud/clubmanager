@@ -32,7 +32,7 @@ function Brand({
       </div>
       <span className="min-w-0">
         <span className="block text-sm font-bold leading-tight text-white">
-          {variant === "platform" ? "ClubManager" : "C.A. Estudiantes"}
+          {variant === "platform" ? "Nuestro Club" : "C.A. Estudiantes"}
         </span>
         <span className="block truncate text-[11px] leading-tight text-red-400">
           {variant === "platform" ? "Panel de plataforma" : "Básquet Mercedes (B)"}

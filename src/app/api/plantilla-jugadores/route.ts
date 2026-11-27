@@ -64,7 +64,7 @@ export async function GET() {
     status: 200,
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="plantilla_jugadores_clubmanager.csv"',
+      "Content-Disposition": 'attachment; filename="plantilla_jugadores_nuestroclub.csv"',
     },
   });
 }

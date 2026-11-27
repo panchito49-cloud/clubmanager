@@ -23,7 +23,7 @@ export default async function ImportFixturePage() {
         actions={
           <a
             href="/api/plantilla-fixture"
-            download="plantilla_fixture_clubmanager.csv"
+            download="plantilla_fixture_nuestroclub.csv"
             className="inline-flex items-center gap-1.5 rounded-lg border border-ink-200 bg-white px-3 py-1.5 text-xs font-medium text-ink-800 shadow-xs transition hover:bg-ink-50"
           >
             <Icon name="download" size={15} /> Descargar plantilla Excel / CSV

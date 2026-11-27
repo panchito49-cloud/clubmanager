@@ -19,7 +19,7 @@ export default async function SinClubPage() {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-400 to-brand-700 text-xs font-bold text-white">
               CM
             </span>
-            <span className="text-sm font-semibold text-ink-900">ClubManager</span>
+            <span className="text-sm font-semibold text-ink-900">Nuestro Club</span>
           </Link>
           <form action={logoutAction}>
             <button type="submit" className="flex items-center gap-1.5 text-xs text-ink-500 hover:text-ink-800">

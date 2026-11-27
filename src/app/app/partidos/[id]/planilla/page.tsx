@@ -217,7 +217,7 @@ export default async function MatchScoreSheetPage({
 
         {/* Pie de Página Oficial */}
         <div className="mt-8 border-t border-slate-200 pt-3 flex justify-between text-[10px] text-slate-400">
-          <span>ClubManager · Sistema de Gestión Deportiva</span>
+          <span>Nuestro Club · Sistema de Gestión Deportiva</span>
           <span>Club Atlético Estudiantes de Mercedes · Documento Oficial</span>
         </div>
       </div>

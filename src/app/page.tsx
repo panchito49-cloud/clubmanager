@@ -147,7 +147,7 @@ export default async function LandingPage() {
                     href="/login"
                     className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-3.5 text-sm font-extrabold uppercase tracking-wider text-white shadow-lg shadow-brand-600/30 hover:from-brand-500 hover:to-brand-600 transition"
                   >
-                    🏀 Ingresar al ClubManager
+                    🏀 Ingresar a Nuestro Club
                   </Link>
                   <a
                     href="https://wa.me/5492324505050?text=Hola!%20Quisiera%20consultar%20información%20e%20inscripciones%20para%20Básquetbol%20en%20Club%20Estudiantes."
@@ -318,7 +318,7 @@ export default async function LandingPage() {
                   href="/login"
                   className="text-xs font-bold text-brand-400 hover:text-brand-300 underline"
                 >
-                  Ver fixture completo en ClubManager →
+                  Ver fixture completo en Nuestro Club →
                 </Link>
               </div>
 
@@ -444,7 +444,7 @@ export default async function LandingPage() {
                     <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 font-bold">3</span>
                     <div>
                       <p className="font-bold text-white text-sm">Gestión Moderna y Transparente</p>
-                      <p className="mt-0.5 text-ink-400">Con ClubManager, cada familia tiene su carnet digital con QR, cuotas al día y aviso directo por WhatsApp.</p>
+                      <p className="mt-0.5 text-ink-400">Con Nuestro Club, cada familia tiene su carnet digital con QR, cuotas al día y aviso directo por WhatsApp.</p>
                     </div>
                   </div>
                 </div>
@@ -535,7 +535,7 @@ export default async function LandingPage() {
               Verificar Carnet QR
             </Link>
             <span className="text-ink-700">|</span>
-            <span className="text-ink-600">Powered by ClubManager SaaS</span>
+            <span className="text-ink-600">Powered by Nuestro Club SaaS</span>
           </div>
         </div>
       </footer>

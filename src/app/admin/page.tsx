@@ -19,7 +19,7 @@ export default async function AdminDashboardPage() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Plataforma ClubManager SaaS"
+        title="Plataforma Nuestro Club"
         description="Panel de control maestro para supervisión de clubes, planes comerciales y métricas globales."
         actions={
           <ButtonLink href="/admin/clubes/nuevo" size="sm">
