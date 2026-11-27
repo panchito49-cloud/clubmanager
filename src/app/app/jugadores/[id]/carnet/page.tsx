@@ -23,7 +23,7 @@ export default async function PlayerCarnetPage({
   const { player } = data;
 
   const medical = getMedicalCertificateInfo(player.medicalCertificateExpiresAt);
-  const isEligible = player.status === "active" && medical.status === "valid";
+  const isEligible = player.status === "active" && (medical.status === "valid" || medical.status === "warning");
 
   // Generamos un QR con la API oficial segura y rápida de Google Charts / QR Server
   const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/verificar/jugador/${player.id}`;

@@ -41,7 +41,7 @@ export default async function PublicVerifyPlayerPage({
   if (!row) notFound();
 
   const medical = getMedicalCertificateInfo(row.medicalCertificateExpiresAt);
-  const isEligible = row.status === "active" && medical.status === "valid";
+  const isEligible = row.status === "active" && (medical.status === "valid" || medical.status === "warning");
 
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-8 text-white flex flex-col items-center justify-center">
