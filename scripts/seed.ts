@@ -633,15 +633,15 @@ async function main() {
     });
   }
 
-  // Partidos y convocatorias ------------------------------------------------
-  // 1. Partido Jugado U15 vs Quilmes de Mercedes (Clásico local)
+  // Partidos y convocatorias (Liga oficial de 10 equipos) -------------------
+  // 1. Partido Jugado U15 vs Club Mercedes (Gran clásico de la ciudad)
   const [matchU15Played] = await db
     .insert(matches)
     .values({
       clubId: club.id,
       categoryId: u15,
       coachMembershipId: membershipIds.get("martin.ferreyra@barrio-norte.demo"),
-      rival: "Club Quilmes de Mercedes",
+      rival: "Club Mercedes",
       startsAt: atLocal(addDays(today, -10), "18:30"),
       location: "Estadio Centenario - Cancha 1 (Calle 33 N° 334)",
       isHome: true,
@@ -661,7 +661,7 @@ async function main() {
     });
   }
 
-  // 2. Partido Jugado U17 vs Club Mercedes
+  // 2. Partido Jugado U17 vs Ateneo de la Juventud (Visitante en Mercedes)
   const u17Players = playerRows.filter((p) => p.cat === "U17");
   const [matchU17Played] = await db
     .insert(matches)
@@ -669,9 +669,9 @@ async function main() {
       clubId: club.id,
       categoryId: u17,
       coachMembershipId: membershipIds.get("martin.ferreyra@barrio-norte.demo"),
-      rival: "Club Mercedes",
+      rival: "Ateneo de la Juventud",
       startsAt: atLocal(addDays(today, -5), "20:00"),
-      location: "Gimnasio Club Mercedes",
+      location: "Estadio Polideportivo Ateneo - Calle 11 N° 750",
       isHome: false,
       status: "played",
       ourScore: 65,
@@ -689,7 +689,7 @@ async function main() {
     });
   }
 
-  // 3. Partido Jugado Primera vs San Martín
+  // 3. Partido Jugado Primera vs Sarmiento
   const primeraPlayers = playerRows.filter((p) => p.cat === "Primera");
   const [matchPrimeraPlayed] = await db
     .insert(matches)
@@ -697,7 +697,7 @@ async function main() {
       clubId: club.id,
       categoryId: primera,
       coachMembershipId: membershipIds.get("lucia.benitez@barrio-norte.demo"),
-      rival: "San Martín de Junín",
+      rival: "Club Sarmiento",
       startsAt: atLocal(addDays(today, -2), "21:30"),
       location: "Estadio Centenario - Cancha 1 (Calle 33 N° 334)",
       isHome: true,
@@ -717,14 +717,14 @@ async function main() {
     });
   }
 
-  // 4. Próximo Partido U15 vs Colón de Chivilcoy (Fixture)
+  // 4. Próximo Partido U15 vs Club San Carlos (Fixture)
   const [upcomingMatchU15] = await db
     .insert(matches)
     .values({
       clubId: club.id,
       categoryId: u15,
       coachMembershipId: membershipIds.get("martin.ferreyra@barrio-norte.demo"),
-      rival: "Deportivo Colón de Chivilcoy",
+      rival: "Club San Carlos",
       startsAt: atLocal(addDays(today, 3), "18:30"),
       location: "Estadio Centenario - Cancha 1 (Calle 33 N° 334)",
       isHome: true,
@@ -742,19 +742,19 @@ async function main() {
     });
   }
 
-  // 5. Próximo Partido U17 vs Ateneo de la Juventud (Fixture)
+  // 5. Próximo Partido U17 vs Club Náutico El Timón (Fixture - Visitante)
   const [upcomingMatchU17] = await db
     .insert(matches)
     .values({
       clubId: club.id,
       categoryId: u17,
       coachMembershipId: membershipIds.get("martin.ferreyra@barrio-norte.demo"),
-      rival: "Ateneo de la Juventud de Mercedes",
+      rival: "El Timón",
       startsAt: atLocal(addDays(today, 4), "11:00"),
-      location: "Gimnasio Ateneo de la Juventud",
+      location: "Gimnasio de la Ribera - Av. Flandes y Río Luján, Jáuregui",
       isHome: false,
       status: "scheduled",
-      notes: "Punto de encuentro en el club 09:45hs para trasladarnos juntos.",
+      notes: "Punto de encuentro en el club 09:30hs para traslado en combi a Jáuregui.",
     })
     .returning({ id: matches.id });
 
@@ -762,6 +762,57 @@ async function main() {
     await db.insert(callups).values({
       clubId: club.id,
       matchId: upcomingMatchU17.id,
+      playerId: p.id,
+      status: "invited",
+    });
+  }
+
+  // 6. Próximo Partido Primera vs Costa Brava (Fixture - Local)
+  const [upcomingMatchPrimera] = await db
+    .insert(matches)
+    .values({
+      clubId: club.id,
+      categoryId: primera,
+      coachMembershipId: membershipIds.get("lucia.benitez@barrio-norte.demo"),
+      rival: "Costa Brava",
+      startsAt: atLocal(addDays(today, 7), "21:00"),
+      location: "Estadio Centenario - Cancha 1 (Calle 33 N° 334)",
+      isHome: true,
+      status: "scheduled",
+      notes: "Fecha interzonal de la Liga. Entrada libre para socios con carnet digital al día.",
+    })
+    .returning({ id: matches.id });
+
+  for (const p of primeraPlayers.slice(0, 12)) {
+    await db.insert(callups).values({
+      clubId: club.id,
+      matchId: upcomingMatchPrimera.id,
+      playerId: p.id,
+      status: "invited",
+    });
+  }
+
+  // 7. Próximo Partido U13 vs Dorrego (Fixture - Visitante en Navarro)
+  const [upcomingMatchU13] = await db
+    .insert(matches)
+    .values({
+      clubId: club.id,
+      categoryId: u13,
+      coachMembershipId: membershipIds.get("lucia.benitez@barrio-norte.demo"),
+      rival: "Dorrego",
+      startsAt: atLocal(addDays(today, 9), "10:30"),
+      location: "Microestadio Dorrego - Calle 22 N° 550, Navarro",
+      isHome: false,
+      status: "scheduled",
+      notes: "Viaje en caravana de familias hacia Navarro.",
+    })
+    .returning({ id: matches.id });
+
+  const u13Players = playerRows.filter((p) => p.cat === "U13");
+  for (const p of u13Players) {
+    await db.insert(callups).values({
+      clubId: club.id,
+      matchId: upcomingMatchU13.id,
       playerId: p.id,
       status: "invited",
     });

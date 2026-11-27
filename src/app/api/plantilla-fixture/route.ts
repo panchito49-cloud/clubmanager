@@ -15,30 +15,30 @@ export async function GET() {
   const sampleRows = [
     [
       "U15 Masculino",
-      "Club Quilmes de Mercedes",
+      "Club Mercedes",
       "12/12/2026",
       "18:30",
       "Visitante",
-      "Calle 12 N° 640 (entre 27 y 29), Mercedes",
-      "Llegar 45 min antes con indumentaria suplente",
+      "Av. 29 N° 720 (entre 30 y 32), Mercedes",
+      "Clásico de la ciudad. Llegar 45 min antes con indumentaria completa.",
     ].join(";"),
     [
       "U17 Masculino",
-      "San Martín de Junín",
+      "Club Sarmiento",
       "19/12/2026",
       "20:00",
       "Local",
       "Calle 33 N° 334, Mercedes",
-      "Partido por la Copa Centenario",
+      "Partido por la fecha 4 de la liga oficial.",
     ].join(";"),
     [
       "Primera Masculino",
-      "Colón de Chivilcoy",
+      "Club Náutico El Timón",
       "26/12/2026",
       "21:30",
       "Visitante",
-      "Av. Bernardo de Irigoyen 150, Chivilcoy",
-      "Salida en micro desde la sede Calle 33 N° 334",
+      "Av. Flandes y Río Luján, Jáuregui",
+      "Salida en micro desde la sede Calle 33 N° 334.",
     ].join(";"),
   ];
 
