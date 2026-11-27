@@ -16,6 +16,7 @@ import {
   chargesOverview,
   defaultPeriod,
   listCharges,
+  listCriticalOverdueCases,
   listPeriods,
 } from "@/server/data/finance";
 import { listCategories } from "@/server/data/people";
@@ -40,7 +41,7 @@ export default async function ChargesPage({
   const params = await searchParams;
   const period = params.periodo || defaultPeriod();
 
-  const [periods, categories, result, overview] = await Promise.all([
+  const [periods, categories, result, overview, criticalCases] = await Promise.all([
     listPeriods(ctx),
     listCategories(ctx),
     listCharges(ctx, {
@@ -51,6 +52,7 @@ export default async function ChargesPage({
       page: Number(params.page ?? 1) || 1,
     }),
     chargesOverview(ctx, period),
+    listCriticalOverdueCases(ctx, 90),
   ]);
 
   const today = todayISO();
@@ -63,10 +65,15 @@ export default async function ChargesPage({
         title="Cuotas"
         description={`Obligaciones de pago del club · ${monthLabel(period)}`}
         actions={
-          <>
+          <div className="flex flex-wrap items-center gap-2">
             {canDeclare ? (
               <ButtonLink href="/app/cuotas/declarar" variant="secondary" size="sm">
                 Declarar pago
+              </ButtonLink>
+            ) : null}
+            {canManage || can(ctx, "payments.review") ? (
+              <ButtonLink href="/app/pagos/nuevo" variant="primary" size="sm">
+                <Icon name="plus" size={15} /> Cobrar en caja
               </ButtonLink>
             ) : null}
             {canManage ? (
@@ -74,12 +81,12 @@ export default async function ChargesPage({
                 <ButtonLink href="/app/cuotas/planes" variant="secondary" size="sm">
                   Planes de cuota
                 </ButtonLink>
-                <ButtonLink href="/app/cuotas/generar" size="sm">
-                  <Icon name="plus" size={15} /> Liquidar mes
+                <ButtonLink href="/app/cuotas/generar" variant="secondary" size="sm">
+                  Liquidar mes
                 </ButtonLink>
               </>
             ) : null}
-          </>
+          </div>
         }
       />
 
@@ -109,6 +116,38 @@ export default async function ChargesPage({
           accent={overview.overdueCount > 0 ? "danger" : "neutral"}
         />
       </div>
+
+      {criticalCases.length > 0 ? (
+        <div className="mt-4 rounded-xl border border-amber-300 bg-amber-50/90 p-4 shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <span className="rounded-full bg-amber-200 p-2 text-amber-900 shrink-0 mt-0.5">
+                <Icon name="alert" size={18} />
+              </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-amber-950">
+                    Detección Inteligente: Casos con Mora Crítica (+90 días)
+                  </h3>
+                  <span className="rounded bg-amber-200 px-2 py-0.5 text-[11px] font-bold text-amber-900">
+                    {criticalCases.length} familia(s)
+                  </span>
+                </div>
+                <p className="text-xs text-amber-900/90 mt-1">
+                  Se detectaron deudas de más de 90 días ({criticalCases.map((c) => `${c.familyName} [${c.maxDaysOverdue}d de atraso]`).join(", ")}).
+                  Podés formalizar un <strong>Plan de Facilidades de Pago</strong> en cuotas mensuales para asegurar la continuidad deportiva de los jugadores.
+                </p>
+              </div>
+            </div>
+            <Link
+              href={`/app/cuotas/refinanciar?familia=${criticalCases[0]?.familyId}`}
+              className="inline-flex items-center gap-1.5 rounded-lg bg-amber-900 px-3 py-2 text-xs font-bold text-white shadow-xs hover:bg-amber-950 transition shrink-0"
+            >
+              🤝 Armar Plan de Pagos en Cuotas
+            </Link>
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-6">
         <Tabs
@@ -229,6 +268,17 @@ export default async function ChargesPage({
                   const overdue =
                     charge.dueDate < today &&
                     (charge.status === "pending" || charge.status === "partial");
+                  const daysOverdue = overdue
+                    ? Math.max(
+                        0,
+                        Math.floor(
+                          (new Date(today).getTime() - new Date(charge.dueDate).getTime()) /
+                            (1000 * 60 * 60 * 24),
+                        ),
+                      )
+                    : 0;
+                  const isCritical = daysOverdue >= 90;
+
                   return (
                     <TR key={charge.id}>
                       <TD>
@@ -257,7 +307,13 @@ export default async function ChargesPage({
                       </TD>
                       <TD className={`whitespace-nowrap text-xs ${overdue ? "font-medium text-rose-600" : ""}`}>
                         {formatDate(charge.dueDate)}
-                        {overdue ? <span className="block text-[10px]">vencida</span> : null}
+                        {isCritical ? (
+                          <span className="block text-[10px] font-bold text-rose-800">
+                            mora {daysOverdue}d (+90d)
+                          </span>
+                        ) : overdue ? (
+                          <span className="block text-[10px]">vencida</span>
+                        ) : null}
                       </TD>
                       <TD align="right" className="money text-xs">
                         {formatMoney(charge.totalCents)}
@@ -281,6 +337,24 @@ export default async function ChargesPage({
                         )}
                       </TD>
                       <TD align="right" className="space-x-1 whitespace-nowrap">
+                        {isCritical && canManage && charge.familyId && balance > 0 ? (
+                          <Link
+                            href={`/app/cuotas/refinanciar?familia=${charge.familyId}`}
+                            className="inline-flex items-center gap-1 rounded-lg bg-amber-700 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-800 transition shadow-2xs"
+                            title="Armar plan de pago en cuotas"
+                          >
+                            🤝 Refinanciar
+                          </Link>
+                        ) : null}
+                        {balance > 0 && charge.status !== "void" && (canManage || can(ctx, "payments.review")) ? (
+                          <Link
+                            href={`/app/pagos/nuevo?familia=${charge.familyId ?? ""}&monto=${balance}`}
+                            className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 text-xs font-medium text-white hover:bg-emerald-700 transition"
+                            title="Cobrar en caja (efectivo/transferencia)"
+                          >
+                            <Icon name="check" size={12} /> Cobrar
+                          </Link>
+                        ) : null}
                         {balance > 0 && charge.status !== "void" ? (
                           <PayButton
                             clubId={ctx.club.id}

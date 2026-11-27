@@ -5,6 +5,8 @@ import {
   getCollectionSummaryReport,
   getAttendanceByCategoryReport,
   getDebtByFamilyReport,
+  getMedicalCertificateReport,
+  getBasketballSeasonReport,
 } from "@/server/data/reports";
 import { db } from "@/db/client";
 import { charges, families, players, categories } from "@/db/schema";
@@ -161,6 +163,68 @@ export async function GET(
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="reporte_morosidad_${ctx.club.slug}.csv"`,
+      },
+    });
+  }
+
+  if (tipo === "medico") {
+    const report = await getMedicalCertificateReport(ctx);
+    const headers = [
+      "Jugador",
+      "Categoria",
+      "Familia",
+      "Vencimiento Certificado",
+      "Dias Vencido / Estado",
+    ].join(";");
+    const rows = report.expiredPlayers.map((r) =>
+      [
+        `"${r.fullName}"`,
+        `"${r.categoryName}"`,
+        `"${r.familyName || ""}"`,
+        r.expiresAt || "Sin certificado cargado",
+        r.expiresAt ? `${r.daysExpired} dias` : "FALTA CERTIFICADO",
+      ].join(";"),
+    );
+
+    const csv = `${bom}${headers}\r\n${rows.join("\r\n")}\r\n`;
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="reporte_aptos_medicos_${ctx.club.slug}.csv"`,
+      },
+    });
+  }
+
+  if (tipo === "temporada") {
+    const report = await getBasketballSeasonReport(ctx);
+    const headers = [
+      "Categoria",
+      "Rama",
+      "Partidos Jugados",
+      "Ganados",
+      "Perdidos",
+      "Puntos a Favor",
+      "Puntos en Contra",
+      "Diferencia",
+    ].join(";");
+    const rows = report.categoryStats.map((c) =>
+      [
+        `"${c.categoryName}"`,
+        c.categoryGender === "male" ? "Masculino" : c.categoryGender === "female" ? "Femenino" : "Mixto",
+        c.total,
+        c.won,
+        c.lost,
+        c.pointsFor,
+        c.pointsAgainst,
+        c.pointsFor - c.pointsAgainst,
+      ].join(";"),
+    );
+
+    const csv = `${bom}${headers}\r\n${rows.join("\r\n")}\r\n`;
+    return new NextResponse(csv, {
+      headers: {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="reporte_temporada_basquet_${ctx.club.slug}.csv"`,
       },
     });
   }

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, gte, ilike, inArray, lt, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, isNull, lt, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   categories,
@@ -371,4 +371,189 @@ export async function clubUsersForAudit(ctx: TenantContext) {
     .select({ id: users.id, fullName: users.fullName })
     .from(users)
     .where(eq(users.id, ctx.auth.user.id));
+}
+
+// Inteligencia de cobranzas: mora crítica y planes de refinanciación ----------
+
+export type Overdue90Charge = {
+  id: string;
+  concept: string;
+  period: string;
+  dueDate: string;
+  totalCents: number;
+  paidCents: number;
+  balanceCents: number;
+  daysOverdue: number;
+  isCritical: boolean;
+  playerName: string | null;
+};
+
+export type Overdue90FamilyCase = {
+  familyId: string;
+  familyName: string;
+  contactName: string | null;
+  contactPhone: string | null;
+  totalDebtCents: number;
+  criticalDebtCents: number;
+  maxDaysOverdue: number;
+  criticalChargesCount: number;
+  totalChargesCount: number;
+  charges: Overdue90Charge[];
+};
+
+export async function listCriticalOverdueCases(
+  ctx: TenantContext,
+  thresholdDays: number = 90,
+): Promise<Overdue90FamilyCase[]> {
+  const today = todayISO();
+  const todayMs = new Date(today).getTime();
+
+  const rows = await db
+    .select({
+      id: charges.id,
+      concept: charges.concept,
+      period: charges.period,
+      dueDate: charges.dueDate,
+      totalCents: charges.totalCents,
+      paidCents: charges.paidCents,
+      familyId: charges.familyId,
+      familyName: families.name,
+      contactName: families.contactName,
+      contactPhone: families.contactPhone,
+      playerName: sql<string>`(${players.firstName} || ' ' || ${players.lastName})`,
+    })
+    .from(charges)
+    .innerJoin(families, eq(families.id, charges.familyId))
+    .leftJoin(players, eq(players.id, charges.playerId))
+    .where(
+      and(
+        eq(charges.clubId, ctx.club.id),
+        isNull(charges.voidedAt),
+        inArray(charges.status, ["pending", "partial"]),
+        lt(charges.dueDate, today),
+      ),
+    )
+    .orderBy(asc(charges.dueDate));
+
+  const byFamily = new Map<string, Overdue90FamilyCase>();
+
+  for (const r of rows) {
+    if (!r.familyId) continue;
+    const dueMs = new Date(r.dueDate).getTime();
+    const daysOverdue = Math.max(0, Math.floor((todayMs - dueMs) / (1000 * 60 * 60 * 24)));
+    const balanceCents = Math.max(0, r.totalCents - r.paidCents);
+    const isCritical = daysOverdue >= thresholdDays;
+
+    let caseItem = byFamily.get(r.familyId);
+    if (!caseItem) {
+      caseItem = {
+        familyId: r.familyId,
+        familyName: r.familyName,
+        contactName: r.contactName,
+        contactPhone: r.contactPhone,
+        totalDebtCents: 0,
+        criticalDebtCents: 0,
+        maxDaysOverdue: 0,
+        criticalChargesCount: 0,
+        totalChargesCount: 0,
+        charges: [],
+      };
+      byFamily.set(r.familyId, caseItem);
+    }
+
+    caseItem.totalDebtCents += balanceCents;
+    if (isCritical) {
+      caseItem.criticalDebtCents += balanceCents;
+      caseItem.criticalChargesCount += 1;
+    }
+    caseItem.maxDaysOverdue = Math.max(caseItem.maxDaysOverdue, daysOverdue);
+    caseItem.totalChargesCount += 1;
+    caseItem.charges.push({
+      id: r.id,
+      concept: r.concept,
+      period: r.period,
+      dueDate: r.dueDate,
+      totalCents: r.totalCents,
+      paidCents: r.paidCents,
+      balanceCents,
+      daysOverdue,
+      isCritical,
+      playerName: r.playerName,
+    });
+  }
+
+  return Array.from(byFamily.values()).filter((c) => c.maxDaysOverdue >= thresholdDays);
+}
+
+export async function getFamilyDebtForRefinancing(
+  ctx: TenantContext,
+  familyId: string,
+) {
+  const today = todayISO();
+  const todayMs = new Date(today).getTime();
+
+  const [family] = await db
+    .select({
+      id: families.id,
+      name: families.name,
+      contactName: families.contactName,
+      contactPhone: families.contactPhone,
+    })
+    .from(families)
+    .where(and(eq(families.id, familyId), eq(families.clubId, ctx.club.id)))
+    .limit(1);
+
+  if (!family) return null;
+
+  const rows = await db
+    .select({
+      id: charges.id,
+      concept: charges.concept,
+      period: charges.period,
+      dueDate: charges.dueDate,
+      totalCents: charges.totalCents,
+      paidCents: charges.paidCents,
+      playerName: sql<string>`(${players.firstName} || ' ' || ${players.lastName})`,
+    })
+    .from(charges)
+    .leftJoin(players, eq(players.id, charges.playerId))
+    .where(
+      and(
+        eq(charges.clubId, ctx.club.id),
+        eq(charges.familyId, familyId),
+        isNull(charges.voidedAt),
+        inArray(charges.status, ["pending", "partial"]),
+      ),
+    )
+    .orderBy(asc(charges.dueDate));
+
+  const chargesList: Overdue90Charge[] = rows.map((r) => {
+    const dueMs = new Date(r.dueDate).getTime();
+    const daysOverdue = Math.max(0, Math.floor((todayMs - dueMs) / (1000 * 60 * 60 * 24)));
+    const balanceCents = Math.max(0, r.totalCents - r.paidCents);
+    return {
+      id: r.id,
+      concept: r.concept,
+      period: r.period,
+      dueDate: r.dueDate,
+      totalCents: r.totalCents,
+      paidCents: r.paidCents,
+      balanceCents,
+      daysOverdue,
+      isCritical: daysOverdue >= 90,
+      playerName: r.playerName,
+    };
+  });
+
+  const totalBalanceCents = chargesList.reduce((sum, c) => sum + c.balanceCents, 0);
+  const criticalBalanceCents = chargesList
+    .filter((c) => c.isCritical)
+    .reduce((sum, c) => sum + c.balanceCents, 0);
+
+  return {
+    family,
+    charges: chargesList,
+    totalBalanceCents,
+    criticalBalanceCents,
+  };
 }

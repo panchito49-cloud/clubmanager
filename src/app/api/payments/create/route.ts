@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { eq } from "drizzle-orm";
 import mercadopago from "@/lib/mercadopago";
 import { db } from "@/db/client";
 import * as schema from "@/db/schema";
@@ -24,14 +25,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const accessToken = process.env.MERCADO_PAGO_ACCESS_TOKEN;
-  if (!accessToken) {
-    return NextResponse.json(
-      { error: "Mercado Pago token not configured" },
-      { status: 500 }
-    );
-  }
+  const isDemoMode = !accessToken;
+  const token = accessToken || "TEST-DEMO-CLUBMANAGER";
 
-  mercadopago.configure({ access_token: accessToken });
+  mercadopago.configure({ access_token: token });
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -61,14 +58,38 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     const response = await mercadopago.preferences.create(preferencePayload);
     const { id, init_point } = response.body;
 
+    // Buscamos si la cuota tiene familia asociada
+    let familyId: string | null = null;
+    let payerName: string | null = null;
+    if (chargeId) {
+      const [ch] = await db
+        .select({
+          familyId: schema.charges.familyId,
+        })
+        .from(schema.charges)
+        .where(eq(schema.charges.id, chargeId))
+        .limit(1);
+      if (ch?.familyId) {
+        familyId = ch.familyId;
+        const [fam] = await db
+          .select({ name: schema.families.name })
+          .from(schema.families)
+          .where(eq(schema.families.id, ch.familyId))
+          .limit(1);
+        payerName = fam?.name ?? null;
+      }
+    }
+
     // Registramos la intencion de pago en payments con referencia al id de la preferencia
     const [insertedPayment] = await db
       .insert(schema.payments)
       .values({
         clubId,
+        familyId,
         amountCents,
         method: "mercadopago",
         status: "declared",
+        payerName: payerName || "Mercado Pago Checkout",
         reference: id as string,
         notes: `Mercado Pago Preference: ${id} - ${description}`,
       })
@@ -84,7 +105,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       });
     }
 
-    return NextResponse.json({ init_point, preferenceId: id });
+    // En modo demo local, redirigimos al checkout simulado interactivo
+    const checkoutUrl = isDemoMode
+      ? `${baseUrl}/checkout/demo?paymentId=${insertedPayment?.id}&chargeId=${chargeId || ""}&amountCents=${amountCents}&description=${encodeURIComponent(description)}&prefId=${id}`
+      : init_point;
+
+    return NextResponse.json({ init_point: checkoutUrl, preferenceId: id });
   } catch (error: unknown) {
     console.error("Mercado Pago create preference error", error);
     return NextResponse.json(

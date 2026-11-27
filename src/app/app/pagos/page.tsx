@@ -37,11 +37,18 @@ export default async function PaymentsPage({
         title="Pagos"
         description="Pagos declarados por las familias y pagos revisados por el club."
         actions={
-          canDeclare ? (
-            <ButtonLink href="/app/cuotas/declarar" variant="secondary" size="sm">
-              Declarar pago
-            </ButtonLink>
-          ) : null
+          <div className="flex items-center gap-2">
+            {canDeclare ? (
+              <ButtonLink href="/app/cuotas/declarar" variant="secondary" size="sm">
+                Declarar pago
+              </ButtonLink>
+            ) : null}
+            {canReview ? (
+              <ButtonLink href="/app/pagos/nuevo" size="sm">
+                <Icon name="plus" size={15} /> Cobrar en caja
+              </ButtonLink>
+            ) : null}
+          </div>
         }
       />
 
@@ -183,10 +190,19 @@ export default async function PaymentsPage({
                     <TD>
                       <StatusBadge meta={paymentStatusMeta[payment.status]} />
                     </TD>
-                    <TD align="right">
+                    <TD align="right" className="space-x-2 whitespace-nowrap">
+                      {payment.status === "approved" ? (
+                        <Link
+                          href={`/app/pagos/${payment.id}/recibo`}
+                          className="text-xs font-semibold text-brand-700 hover:underline"
+                          title="Ver Recibo Oficial"
+                        >
+                          Recibo 🧾
+                        </Link>
+                      ) : null}
                       <Link
                         href={`/app/pagos/${payment.id}`}
-                        className="text-xs font-medium text-brand-700 hover:underline"
+                        className="text-xs font-medium text-ink-600 hover:text-ink-900"
                       >
                         {canReview &&
                         (payment.status === "declared" || payment.status === "under_review")

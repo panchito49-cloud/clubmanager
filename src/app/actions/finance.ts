@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { and, asc, eq, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/client";
@@ -712,6 +713,339 @@ export async function voidChargeAction(formData: FormData): Promise<void> {
     entityId: chargeId,
     meta: { reason },
   });
+}
+
+// Cobro directo en caja / administracion -------------------------------------
+
+const directPaymentSchema = z.object({
+  familyId: z.string().uuid("Elegí la familia que realizó el pago"),
+  amount: z.string().min(1, "Ingresá el importe cobrado"),
+  method: z.enum(["cash", "transfer", "mercadopago", "other"]),
+  reference: z
+    .string()
+    .trim()
+    .max(80)
+    .optional()
+    .transform((value) => (value ? value : null)),
+  payerName: z
+    .string()
+    .trim()
+    .max(120)
+    .optional()
+    .transform((value) => (value ? value : null)),
+  notes: z
+    .string()
+    .trim()
+    .max(500)
+    .optional()
+    .transform((value) => (value ? value : null)),
+});
+
+export async function recordDirectPaymentAction(
+  _prev: FinanceFormState,
+  formData: FormData,
+): Promise<FinanceFormState> {
+  const ctx = await getTenant();
+  assertCan(ctx, "payments.review");
+
+  const parsed = directPaymentSchema.safeParse({
+    familyId: formData.get("familyId"),
+    amount: formData.get("amount"),
+    method: formData.get("method") ?? "cash",
+    reference: formData.get("reference"),
+    payerName: formData.get("payerName"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Revisá los datos del cobro." };
+  }
+
+  let amountCents = 0;
+  try {
+    amountCents = parseMoneyToCents(parsed.data.amount);
+  } catch {
+    return { error: "El importe no es válido." };
+  }
+  if (amountCents <= 0) return { error: "El importe debe ser mayor a cero." };
+
+  const [family] = await db
+    .select({ id: families.id, name: families.name })
+    .from(families)
+    .where(and(eq(families.id, parsed.data.familyId), eq(families.clubId, ctx.club.id)))
+    .limit(1);
+  if (!family) return { error: "La familia no pertenece al club." };
+
+  let createdPaymentId = "";
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      const chargeRows = await tx
+        .select({
+          id: charges.id,
+          dueDate: charges.dueDate,
+          totalCents: charges.totalCents,
+          paidCents: charges.paidCents,
+        })
+        .from(charges)
+        .where(
+          and(
+            eq(charges.clubId, ctx.club.id),
+            eq(charges.familyId, family.id),
+            inArray(charges.status, ["pending", "partial"]),
+            isNull(charges.voidedAt),
+          ),
+        )
+        .orderBy(asc(charges.dueDate));
+
+      const { applications, unappliedCents } = allocateOldestFirst(
+        chargeRows.map((row) => ({
+          id: row.id,
+          dueDate: row.dueDate,
+          totalCents: row.totalCents,
+          paidCents: row.paidCents,
+        })),
+        amountCents,
+      );
+
+      const [payment] = await tx
+        .insert(payments)
+        .values({
+          clubId: ctx.club.id,
+          familyId: family.id,
+          amountCents,
+          method: parsed.data.method,
+          status: "approved",
+          payerName: parsed.data.payerName || family.name,
+          reference: parsed.data.reference,
+          notes: parsed.data.notes,
+          declaredByUserId: ctx.auth.user.id,
+          reviewedByUserId: ctx.auth.user.id,
+          reviewedAt: new Date(),
+          creditCents: unappliedCents,
+        })
+        .returning({ id: payments.id });
+
+      for (const application of applications) {
+        const charge = chargeRows.find((row) => row.id === application.chargeId);
+        if (!charge) continue;
+        const newPaid = charge.paidCents + application.amountCents;
+
+        await tx.insert(paymentApplications).values({
+          clubId: ctx.club.id,
+          paymentId: payment.id,
+          chargeId: charge.id,
+          amountCents: application.amountCents,
+        });
+
+        await tx
+          .update(charges)
+          .set({
+            paidCents: newPaid,
+            status: chargeStatusFor(charge.totalCents, newPaid),
+            updatedAt: new Date(),
+          })
+          .where(and(eq(charges.id, charge.id), eq(charges.clubId, ctx.club.id)));
+      }
+
+      return {
+        paymentId: payment.id,
+        applications: applications.length,
+        unappliedCents,
+      };
+    });
+
+    createdPaymentId = result.paymentId;
+
+    await writeAudit({
+      clubId: ctx.club.id,
+      actorUserId: ctx.auth.user.id,
+      actorEmail: ctx.auth.user.email,
+      action: "payment.direct_recorded",
+      entity: "payment",
+      entityId: result.paymentId,
+      meta: {
+        familyId: family.id,
+        amountCents,
+        method: parsed.data.method,
+        applications: result.applications,
+      },
+    });
+  } catch (error) {
+    console.error("[payments.direct_record]", error);
+    return { error: "No se pudo registrar el cobro en caja." };
+  }
+
+  redirect(`/app/pagos/${createdPaymentId}/recibo?ok=Cobro+registrado+con+%C3%A9xito`);
+}
+
+// Planes de Facilidades y Refinanciacion de Deuda (>90 dias) ----------------
+
+const paymentPlanSchema = z.object({
+  familyId: z.string().uuid("Familia requerida"),
+  chargeIds: z.string().min(1, "Seleccioná al menos una cuota para refinanciar"),
+  installments: z.coerce.number().int().min(2, "Mínimo 2 cuotas").max(12, "Máximo 12 cuotas"),
+  discountPct: z.coerce.number().int().min(0).max(50).default(0),
+  firstDueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha de primer vencimiento inválida"),
+  notes: z.string().trim().max(500).optional().transform((v) => v || null),
+});
+
+export async function createPaymentPlanAction(
+  _prev: FinanceFormState,
+  formData: FormData,
+): Promise<FinanceFormState> {
+  const ctx = await getTenant();
+  assertCan(ctx, "fees.manage");
+
+  const parsed = paymentPlanSchema.safeParse({
+    familyId: formData.get("familyId"),
+    chargeIds: formData.get("chargeIds"),
+    installments: formData.get("installments") ?? 3,
+    discountPct: formData.get("discountPct") ?? 0,
+    firstDueDate: formData.get("firstDueDate"),
+    notes: formData.get("notes"),
+  });
+
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Revisá los datos del plan de pago." };
+  }
+
+  let selectedChargeIds: string[] = [];
+  try {
+    selectedChargeIds = JSON.parse(parsed.data.chargeIds);
+  } catch {
+    selectedChargeIds = parsed.data.chargeIds.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+
+  if (selectedChargeIds.length === 0) {
+    return { error: "Seleccioná al menos una cuota para refinanciar." };
+  }
+
+  const [family] = await db
+    .select({ id: families.id, name: families.name })
+    .from(families)
+    .where(and(eq(families.id, parsed.data.familyId), eq(families.clubId, ctx.club.id)))
+    .limit(1);
+
+  if (!family) return { error: "La familia no pertenece al club." };
+
+  const existingCharges = await db
+    .select({
+      id: charges.id,
+      concept: charges.concept,
+      totalCents: charges.totalCents,
+      paidCents: charges.paidCents,
+    })
+    .from(charges)
+    .where(
+      and(
+        eq(charges.clubId, ctx.club.id),
+        eq(charges.familyId, family.id),
+        inArray(charges.id, selectedChargeIds),
+        isNull(charges.voidedAt),
+        inArray(charges.status, ["pending", "partial"]),
+      ),
+    );
+
+  if (existingCharges.length === 0) {
+    return { error: "Las cuotas seleccionadas no tienen saldo pendiente o ya fueron modificadas." };
+  }
+
+  const totalBalanceCents = existingCharges.reduce(
+    (sum, c) => sum + Math.max(0, c.totalCents - c.paidCents),
+    0,
+  );
+
+  if (totalBalanceCents <= 0) {
+    return { error: "El saldo a refinanciar debe ser mayor a cero." };
+  }
+
+  const discountPct = parsed.data.discountPct;
+  const discountCents = Math.round((totalBalanceCents * discountPct) / 100);
+  const financedCents = Math.max(0, totalBalanceCents - discountCents);
+  const n = parsed.data.installments;
+
+  const baseAmount = Math.floor(financedCents / n);
+  const remainder = financedCents % n;
+
+  const [fYear, fMonth, fDay] = parsed.data.firstDueDate.split("-").map(Number);
+
+  try {
+    await db.transaction(async (tx) => {
+      // 1. Anulamos las cuotas viejas con motivo institucional
+      await tx
+        .update(charges)
+        .set({
+          status: "void",
+          voidedAt: new Date(),
+          voidedByUserId: ctx.auth.user.id,
+          notes: `Refinanciada en Plan de Pagos (${n} cuotas) acordado el ${todayISO()}`,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(charges.clubId, ctx.club.id),
+            eq(charges.familyId, family.id),
+            inArray(charges.id, existingCharges.map((c) => c.id)),
+          ),
+        );
+
+      // 2. Insertamos las N cuotas del plan de pago
+      const newChargesValues: Array<typeof charges.$inferInsert> = [];
+
+      for (let i = 1; i <= n; i++) {
+        const d = new Date(Date.UTC(fYear, fMonth - 1 + (i - 1), fDay));
+        const yStr = d.getUTCFullYear();
+        const mStr = String(d.getUTCMonth() + 1).padStart(2, "0");
+        const dStr = String(d.getUTCDate()).padStart(2, "0");
+        const dueDate = `${yStr}-${mStr}-${dStr}`;
+        const period = `${yStr}-${mStr}`;
+        const amount = baseAmount + (i === n ? remainder : 0);
+
+        newChargesValues.push({
+          clubId: ctx.club.id,
+          familyId: family.id,
+          playerId: null,
+          feePlanId: null,
+          concept: `Plan de Facilidades (Cuota ${i}/${n})`,
+          period,
+          dueDate,
+          amountCents: amount,
+          discountCents: 0,
+          totalCents: amount,
+          paidCents: 0,
+          status: "pending",
+          notes: `Convenio de Refinanciación. Deuda consolidada: $${(totalBalanceCents / 100).toFixed(2)}${discountPct > 0 ? ` (Quita acordada: ${discountPct}%)` : ""}. ${parsed.data.notes || ""}`.trim(),
+          createdByUserId: ctx.auth.user.id,
+        });
+      }
+
+      await tx.insert(charges).values(newChargesValues);
+    });
+
+    await writeAudit({
+      clubId: ctx.club.id,
+      actorUserId: ctx.auth.user.id,
+      actorEmail: ctx.auth.user.email,
+      action: "finance.payment_plan_created",
+      entity: "charge",
+      meta: {
+        familyId: family.id,
+        refinancedChargesCount: existingCharges.length,
+        totalBalanceCents,
+        discountPct,
+        financedCents,
+        installments: n,
+      },
+    });
+  } catch (error) {
+    console.error("[finance.create_payment_plan]", error);
+    return { error: "No se pudo generar el plan de pago." };
+  }
+
+  redirect(
+    `/app/cuotas/convenio?familia=${family.id}&cuotas=${n}&total=${financedCents}&original=${totalBalanceCents}&quita=${discountPct}&ok=Plan+de+pago+en+${n}+cuotas+generado+exitosamente`,
+  );
 }
 
 export async function currentBillingPeriod(): Promise<string> {

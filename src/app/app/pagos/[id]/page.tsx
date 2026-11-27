@@ -7,6 +7,7 @@ import { Table, THead, TBody, TR, TH, TD } from "@/components/ui/table";
 import { ActionForm } from "@/components/ui/action-form";
 import { FormSubmitButton } from "@/components/ui/submit";
 import { Field, Textarea } from "@/components/ui/form";
+import { Icon } from "@/components/ui/icon";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { paymentMethodLabel, paymentStatusMeta } from "@/lib/status";
 import {
@@ -40,7 +41,19 @@ export default async function PaymentDetailPage({
         description={`${payment.familyName ?? "Sin familia"} · ${formatDateTime(payment.createdAt)}`}
         backHref="/app/pagos"
         backLabel="Pagos"
-        actions={<StatusBadge meta={paymentStatusMeta[payment.status]} />}
+        actions={
+          <div className="flex items-center gap-2">
+            <StatusBadge meta={paymentStatusMeta[payment.status]} />
+            {payment.status === "approved" ? (
+              <Link
+                href={`/app/pagos/${payment.id}/recibo`}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-brand-700 px-3 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-brand-800 transition"
+              >
+                <Icon name="receipt" size={14} /> Ver Recibo Oficial
+              </Link>
+            ) : null}
+          </div>
+        }
       />
 
       <div className="grid gap-3 sm:grid-cols-2">
