@@ -21,13 +21,9 @@ export default async function PlayerCarnetPage({
   if (!data) notFound();
 
   const { player } = data;
-  const debt = data.charges.reduce(
-    (sum, charge) => sum + Math.max(0, charge.totalCents - charge.paidCents),
-    0
-  );
 
   const medical = getMedicalCertificateInfo(player.medicalCertificateExpiresAt);
-  const isEligible = player.status === "active" && medical.status === "valid" && debt === 0;
+  const isEligible = player.status === "active" && medical.status === "valid";
 
   // Generamos un QR con la API oficial segura y rápida de Google Charts / QR Server
   const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/verificar/jugador/${player.id}`;
@@ -135,7 +131,7 @@ export default async function PlayerCarnetPage({
               </div>
             </div>
 
-            {/* Estado de Habilitación y Semáforo */}
+            {/* Estado de Habilitación Médica y Deportiva */}
             <div className="space-y-2 pt-1">
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-400">Apto Médico (EMDAP):</span>
@@ -145,9 +141,9 @@ export default async function PlayerCarnetPage({
                 </span>
               </div>
               <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">Situación de Cuota:</span>
-                <span className={`font-semibold ${debt === 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {debt === 0 ? "Al día (Sin deuda)" : "Saldo pendiente"}
+                <span className="text-slate-400">Estado Deportivo:</span>
+                <span className="font-semibold text-emerald-400">
+                  {player.status === "active" ? "Activo en Padrón Oficial" : "Inactivo"}
                 </span>
               </div>
             </div>
