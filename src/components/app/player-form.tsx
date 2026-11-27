@@ -20,6 +20,7 @@ export type PlayerDefaults = {
   bloodType?: string | null;
   insuranceProvider?: string | null;
   insuranceNumber?: string | null;
+  medicalCertificateExpiresAt?: string | null;
   medicalNotes?: string | null;
   joinedAt?: string | null;
 };
@@ -182,6 +183,18 @@ export function PlayerFormFields({
           </Field>
           <Field label="Grupo sanguíneo" htmlFor="bloodType">
             <Input id="bloodType" name="bloodType" defaultValue={d.bloodType ?? ""} />
+          </Field>
+          <Field
+            label="Vencimiento Apto Médico (EMDAP)"
+            htmlFor="medicalCertificateExpiresAt"
+            hint="Fecha límite de vigencia del certificado médico anual."
+          >
+            <Input
+              id="medicalCertificateExpiresAt"
+              name="medicalCertificateExpiresAt"
+              type="date"
+              defaultValue={d.medicalCertificateExpiresAt ?? ""}
+            />
           </Field>
         </InlineFields>
         {showMedical ? (

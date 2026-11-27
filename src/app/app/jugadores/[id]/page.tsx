@@ -9,6 +9,8 @@ import { Icon } from "@/components/ui/icon";
 import { FormSubmitButton } from "@/components/ui/submit";
 import { formatDate, formatDateTime, formatMoney, ageFrom } from "@/lib/format";
 import { attendanceStatusMeta, callupStatusMeta, chargeStatusMeta, playerStatusMeta } from "@/lib/status";
+import { getMedicalCertificateInfo } from "@/lib/medical";
+import { WhatsAppButton } from "@/components/app/whatsapp-button";
 import { togglePlayerStatusAction } from "@/app/actions/people";
 import { can, getTenant } from "@/server/tenant";
 import { getPlayer } from "@/server/data/people";
@@ -45,6 +47,13 @@ export default async function PlayerDetailPage({
         backLabel="Jugadores"
         actions={
           <>
+            <ButtonLink
+              href={`/app/jugadores/${player.id}/carnet`}
+              variant="primary"
+              size="sm"
+            >
+              <Icon name="shield" size={14} /> Ver Carnet Digital
+            </ButtonLink>
             <StatusBadge meta={playerStatusMeta[player.status]} />
             {can(ctx, "players.manage") ? (
               <>
@@ -156,6 +165,15 @@ export default async function PlayerDetailPage({
                   {player.familyEmail ? (
                     <p className="text-xs text-ink-500">{player.familyEmail}</p>
                   ) : null}
+                  {player.familyPhone ? (
+                    <div className="pt-2">
+                      <WhatsAppButton
+                        phone={player.familyPhone}
+                        recipientName={player.familyName}
+                        playerName={`${player.firstName} ${player.lastName}`}
+                      />
+                    </div>
+                  ) : null}
                 </>
               ) : (
                 <p className="text-sm text-ink-500">Sin familia asignada.</p>
@@ -170,6 +188,32 @@ export default async function PlayerDetailPage({
                 <DefinitionList
                   columns={1}
                   items={[
+                    {
+                      label: "Apto Médico (EMDAP)",
+                      value: (
+                        <div className="space-y-1">
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${
+                              getMedicalCertificateInfo(player.medicalCertificateExpiresAt).badgeClass
+                            }`}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                getMedicalCertificateInfo(player.medicalCertificateExpiresAt).status === "valid"
+                                  ? "bg-emerald-600"
+                                  : getMedicalCertificateInfo(player.medicalCertificateExpiresAt).status === "warning"
+                                    ? "bg-amber-600"
+                                    : "bg-rose-600"
+                              }`}
+                            />
+                            {getMedicalCertificateInfo(player.medicalCertificateExpiresAt).label}
+                          </span>
+                          <span className="block text-[11px] text-ink-500">
+                            {getMedicalCertificateInfo(player.medicalCertificateExpiresAt).description}
+                          </span>
+                        </div>
+                      ),
+                    },
                     { label: "Obra social", value: player.insuranceProvider },
                     { label: "N° de afiliado", value: player.insuranceNumber },
                     { label: "Grupo sanguíneo", value: player.bloodType },

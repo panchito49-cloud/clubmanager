@@ -49,6 +49,7 @@ const playerSchema = z.object({
   bloodType: optionalText,
   insuranceProvider: optionalText,
   insuranceNumber: optionalText,
+  medicalCertificateExpiresAt: optionalDate,
   medicalNotes: optionalText,
   joinedAt: optionalDate,
 });
@@ -79,6 +80,7 @@ function parsePlayer(formData: FormData) {
     bloodType: formData.get("bloodType"),
     insuranceProvider: formData.get("insuranceProvider"),
     insuranceNumber: formData.get("insuranceNumber"),
+    medicalCertificateExpiresAt: formData.get("medicalCertificateExpiresAt"),
     medicalNotes: formData.get("medicalNotes"),
     joinedAt: formData.get("joinedAt"),
   });
@@ -140,6 +142,7 @@ export async function createPlayerAction(
         bloodType: data.bloodType,
         insuranceProvider: data.insuranceProvider,
         insuranceNumber: data.insuranceNumber,
+        medicalCertificateExpiresAt: data.medicalCertificateExpiresAt,
         medicalNotes: data.medicalNotes,
         joinedAt: data.joinedAt,
       })
@@ -211,6 +214,7 @@ export async function updatePlayerAction(
         bloodType: data.bloodType,
         insuranceProvider: data.insuranceProvider,
         insuranceNumber: data.insuranceNumber,
+        medicalCertificateExpiresAt: data.medicalCertificateExpiresAt,
         medicalNotes: data.medicalNotes,
         joinedAt: data.joinedAt,
         updatedAt: new Date(),

@@ -158,7 +158,20 @@ export default async function FamilyDetailPage({
       ) : null}
 
       <Card className="mt-3 overflow-hidden">
-        <CardHeader title="Cuotas de la familia" />
+        <CardHeader
+          title="Cuotas de la familia"
+          description={outstanding > 0 ? `Saldo total adeudado: ${formatMoney(outstanding)}` : "Al día · Sin deuda"}
+          action={
+            outstanding > 0 && can(ctx, "payments.review") ? (
+              <ButtonLink
+                href={`/app/pagos/nuevo?familia=${family.id}&monto=${outstanding}`}
+                size="sm"
+              >
+                <Icon name="check" size={14} /> Cobrar en caja ({formatMoney(outstanding)})
+              </ButtonLink>
+            ) : null
+          }
+        />
         {data.charges.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-ink-400">
             Sin cuotas generadas.

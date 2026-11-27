@@ -6,6 +6,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import { Input } from "@/components/ui/form";
 import { formatMoney } from "@/lib/format";
+import { WhatsAppButton } from "@/components/app/whatsapp-button";
 import { can, getTenant } from "@/server/tenant";
 import { listFamilies } from "@/server/data/people";
 
@@ -40,6 +41,30 @@ export default async function FamiliesPage({
       />
 
       <Flash ok={params.ok} />
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Total Familias</span>
+          <span className="mt-1 block text-2xl font-bold text-ink-950">{result.total}</span>
+          <span className="mt-0.5 block text-xs text-ink-500">Grupos familiares registrados</span>
+        </div>
+        <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Hermanos / Familias Múltiples</span>
+          <span className="mt-1 block text-2xl font-bold text-red-600">
+            {result.rows.filter(f => f.playerCount > 1).length} familias
+          </span>
+          <span className="mt-0.5 block text-xs text-ink-500">Con beneficio de descuento familiar</span>
+        </div>
+        <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Cobranza Familiar</span>
+          <span className="mt-1 block text-2xl font-bold text-emerald-600">
+            {result.rows.filter(f => f.debtCents === 0).length} al día
+          </span>
+          <span className="mt-0.5 block text-xs text-ink-500">
+            {result.rows.filter(f => f.debtCents > 0).length} con cuotas pendientes
+          </span>
+        </div>
+      </div>
 
       <Card className="overflow-hidden">
         <form method="get" className="flex gap-2 border-b border-ink-100 p-3 sm:p-4">
@@ -102,7 +127,18 @@ export default async function FamiliesPage({
                       </Link>
                     </TD>
                     <TD className="text-sm">{family.contactName}</TD>
-                    <TD className="text-xs text-ink-600">{family.contactPhone}</TD>
+                    <TD className="text-xs text-ink-600 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span>{family.contactPhone ?? "—"}</span>
+                        {family.contactPhone ? (
+                          <WhatsAppButton
+                            phone={family.contactPhone}
+                            recipientName={family.contactName || family.name}
+                            size="sm"
+                          />
+                        ) : null}
+                      </div>
+                    </TD>
                     <TD align="center">
                       <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-ink-100 px-2 text-xs font-semibold text-ink-700">
                         {family.playerCount}

@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 import { Input, Select } from "@/components/ui/form";
 import { formatDate, formatMoney, ageFrom } from "@/lib/format";
 import { playerStatusMeta } from "@/lib/status";
+import { getMedicalCertificateInfo } from "@/lib/medical";
 import { can, getTenant } from "@/server/tenant";
 import { listCategories, listPlayers } from "@/server/data/people";
 
@@ -59,31 +60,56 @@ export default async function PlayersPage({
 
       <Flash ok={params.ok} />
 
+      <div className="mb-4 grid gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Total Jugadores</span>
+          <span className="mt-1 block text-2xl font-bold text-ink-950">{result.total}</span>
+          <span className="mt-0.5 block text-xs text-ink-500">Padrón de deportistas</span>
+        </div>
+        <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Categorías</span>
+          <span className="mt-1 block text-2xl font-bold text-ink-950">{categories.length}</span>
+          <span className="mt-0.5 block text-xs text-red-600 font-medium">Básquet Masc. y Fem.</span>
+        </div>
+        <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Estado de Cuotas</span>
+          <span className="mt-1 block text-2xl font-bold text-emerald-600">
+            {result.rows.filter(r => r.debtCents === 0).length} al día
+          </span>
+          <span className="mt-0.5 block text-xs text-ink-500">
+            {result.rows.filter(r => r.debtCents > 0).length} con saldo pendiente
+          </span>
+        </div>
+        <div className="rounded-xl border border-ink-200 bg-white p-4 shadow-sm">
+          <span className="block text-xs font-semibold uppercase tracking-wider text-ink-400">Sede Principal</span>
+          <span className="mt-1 block text-lg font-bold text-ink-950 truncate">Mercedes (B)</span>
+          <span className="mt-0.5 block text-xs text-ink-500">C.A. Estudiantes</span>
+        </div>
+      </div>
+
       <Card className="overflow-hidden">
         <form
           method="get"
-          className="flex flex-col gap-2 border-b border-ink-100 p-3 sm:flex-row sm:items-center sm:p-4"
+          className="flex flex-col gap-3 border-b border-ink-100 p-3 sm:flex-row sm:items-center sm:justify-between sm:p-4"
         >
-          <div className="flex flex-1 gap-2">
-            <div className="relative flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">
-                <Icon name="search" size={16} />
-              </span>
-              <Input
-                name="q"
-                defaultValue={params.q ?? ""}
-                placeholder="Buscar por nombre o DNI"
-                className="pl-9"
-                aria-label="Buscar jugadores"
-              />
-            </div>
+          <div className="relative flex-1">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400">
+              <Icon name="search" size={16} />
+            </span>
+            <Input
+              name="q"
+              defaultValue={params.q ?? ""}
+              placeholder="Buscar por nombre o DNI"
+              className="pl-9"
+              aria-label="Buscar jugadores"
+            />
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select
               name="categoria"
               defaultValue={params.categoria ?? ""}
               aria-label="Filtrar por categoría"
-              className="min-w-0 flex-1 sm:w-40"
+              className="w-48 text-xs"
             >
               <option value="">Todas las categorías</option>
               {categories.map((category) => {
@@ -105,7 +131,7 @@ export default async function PlayersPage({
               name="estado"
               defaultValue={params.estado ?? ""}
               aria-label="Filtrar por estado"
-              className="w-28"
+              className="w-32 text-xs"
             >
               <option value="">Estado</option>
               <option value="active">Activos</option>
@@ -113,7 +139,7 @@ export default async function PlayersPage({
             </Select>
             <button
               type="submit"
-              className="h-9 shrink-0 rounded-lg bg-ink-900 px-3 text-sm font-medium text-white hover:bg-ink-800"
+              className="h-9 shrink-0 rounded-lg bg-red-600 px-4 text-xs font-semibold text-white transition hover:bg-red-700"
             >
               Filtrar
             </button>
@@ -145,9 +171,10 @@ export default async function PlayersPage({
                   <TH>Categoría</TH>
                   <TH>Familia</TH>
                   <TH>Edad</TH>
+                  <TH>Apto Médico</TH>
                   <TH>Estado</TH>
                   <TH align="right">Deuda</TH>
-                  <TH />
+                  <TH align="right">Acciones</TH>
                 </TR>
               </THead>
               <TBody>
@@ -158,8 +185,8 @@ export default async function PlayersPage({
                         href={`/app/jugadores/${player.id}`}
                         className="flex items-center gap-2.5"
                       >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-100 text-xs font-semibold text-ink-600">
-                          {player.jerseyNumber ?? player.firstName[0]}
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50 text-xs font-bold text-red-700 border border-red-200">
+                          {player.jerseyNumber ? `#${player.jerseyNumber}` : (player.firstName[0] + player.lastName[0])}
                         </span>
                         <span>
                           <span className="block font-medium text-ink-900">
@@ -200,6 +227,28 @@ export default async function PlayersPage({
                       ) : null}
                     </TD>
                     <TD>
+                      {(() => {
+                        const med = getMedicalCertificateInfo(player.medicalCertificateExpiresAt);
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium ${med.badgeClass}`}
+                            title={med.description}
+                          >
+                            <span
+                              className={`h-1.5 w-1.5 rounded-full ${
+                                med.status === "valid"
+                                  ? "bg-emerald-600"
+                                  : med.status === "warning"
+                                    ? "bg-amber-600"
+                                    : "bg-rose-600"
+                              }`}
+                            />
+                            {med.label}
+                          </span>
+                        );
+                      })()}
+                    </TD>
+                    <TD>
                       <StatusBadge meta={playerStatusMeta[player.status]} />
                     </TD>
                     <TD align="right">
@@ -211,12 +260,19 @@ export default async function PlayersPage({
                         <span className="text-xs text-emerald-600">Al día</span>
                       )}
                     </TD>
-                    <TD align="right">
+                    <TD align="right" className="space-x-2 whitespace-nowrap">
+                      <Link
+                        href={`/app/jugadores/${player.id}/carnet`}
+                        className="inline-flex items-center gap-1 rounded bg-red-50 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 transition border border-red-200"
+                        title="Ver Carnet Digital Oficial con QR"
+                      >
+                        <Icon name="shield" size={12} /> Carnet
+                      </Link>
                       <Link
                         href={`/app/jugadores/${player.id}`}
-                        className="text-xs font-medium text-brand-700 hover:underline"
+                        className="text-xs font-medium text-ink-700 hover:text-red-700 hover:underline"
                       >
-                        Ver ficha →
+                        Ficha →
                       </Link>
                     </TD>
                   </TR>
