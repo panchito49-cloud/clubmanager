@@ -10,6 +10,7 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { can, getTenant } from "@/server/tenant";
 import { listCategories } from "@/server/data/people";
 import { listTrainings } from "@/server/data/sports";
+import { VenueMapCard } from "@/components/sports/venue-map-card";
 
 export const metadata = { title: "Calendario y Entrenamientos" };
 
@@ -118,7 +119,13 @@ export default async function CalendarPage({
                         <p className="text-xs text-ink-500">DT: {t.coachName}</p>
                       ) : null}
                     </TD>
-                    <TD className="text-xs text-ink-600">{t.location ?? "Gimnasio del club"}</TD>
+                    <TD>
+                      <VenueMapCard
+                        isHome={true}
+                        location={t.location || "Estadio Centenario - Calle 33 N° 334, Mercedes"}
+                        compact={true}
+                      />
+                    </TD>
                     <TD align="center">
                       <div className="flex flex-col items-center">
                         <span className="text-xs font-semibold text-ink-800">

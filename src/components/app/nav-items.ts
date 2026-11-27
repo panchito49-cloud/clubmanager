@@ -23,6 +23,7 @@ export const CLUB_NAV: NavSection[] = [
     title: "Gestión",
     items: [
       { href: "/app", label: "Panel", icon: "grid", permission: "club.view", exact: true },
+      { href: "/app/portal", label: "Portal familiar", icon: "shield", permission: "club.view" },
       { href: "/app/jugadores", label: "Jugadores", icon: "users", permission: "players.view", module: "jugadores" },
       { href: "/app/familias", label: "Familias", icon: "home", permission: "families.view", module: "jugadores" },
       { href: "/app/categorias", label: "Categorías", icon: "layers", permission: "categories.manage", module: "jugadores" },
@@ -38,6 +39,7 @@ export const CLUB_NAV: NavSection[] = [
   {
     title: "Deportivo",
     items: [
+      { href: "/app/asistencias", label: "Asistencias", icon: "check", permission: "attendance.record", module: "deportivo" },
       { href: "/app/calendario", label: "Calendario", icon: "calendar", permission: "trainings.view", module: "deportivo" },
       { href: "/app/partidos", label: "Partidos", icon: "trophy", permission: "matches.view", module: "deportivo" },
       { href: "/app/viajes", label: "Viajes", icon: "bus", permission: "trips.view", module: "deportivo" },

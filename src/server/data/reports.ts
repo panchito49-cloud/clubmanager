@@ -7,6 +7,7 @@ import {
   categories,
   charges,
   families,
+  matches,
   players,
   trainings,
 } from "@/db/schema";
@@ -215,4 +216,217 @@ export async function getDebtByFamilyReport(
     totalDebtCents: Number(r.totalDebtCents),
     unpaidChargesCount: r.unpaidChargesCount,
   }));
+}
+
+export type MedicalCertificateSummary = {
+  validCount: number;
+  expiredCount: number;
+  missingCount: number;
+  totalActivePlayers: number;
+  compliancePct: number;
+  expiredPlayers: {
+    id: string;
+    fullName: string;
+    categoryName: string;
+    familyId: string | null;
+    familyName: string | null;
+    expiresAt: string | null;
+    daysExpired: number;
+  }[];
+};
+
+export async function getMedicalCertificateReport(
+  ctx: TenantContext,
+): Promise<MedicalCertificateSummary> {
+  const today = new Date().toISOString().split("T")[0];
+
+  const rows = await db
+    .select({
+      id: players.id,
+      firstName: players.firstName,
+      lastName: players.lastName,
+      categoryId: players.categoryId,
+      categoryName: categories.name,
+      familyId: players.familyId,
+      familyName: families.name,
+      expiresAt: players.medicalCertificateExpiresAt,
+      status: players.status,
+    })
+    .from(players)
+    .leftJoin(categories, eq(categories.id, players.categoryId))
+    .leftJoin(families, eq(families.id, players.familyId))
+    .where(and(eq(players.clubId, ctx.club.id), eq(players.status, "active")))
+    .orderBy(players.lastName, players.firstName);
+
+  let validCount = 0;
+  let expiredCount = 0;
+  let missingCount = 0;
+  const expiredPlayers: MedicalCertificateSummary["expiredPlayers"] = [];
+
+  for (const p of rows) {
+    if (!p.expiresAt) {
+      missingCount++;
+      expiredPlayers.push({
+        id: p.id,
+        fullName: `${p.lastName}, ${p.firstName}`,
+        categoryName: p.categoryName || "Sin categoría",
+        familyId: p.familyId,
+        familyName: p.familyName,
+        expiresAt: null,
+        daysExpired: 999,
+      });
+    } else if (p.expiresAt < today) {
+      expiredCount++;
+      const expDate = new Date(p.expiresAt);
+      const diffMs = Math.abs(new Date(today).getTime() - expDate.getTime());
+      const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+      expiredPlayers.push({
+        id: p.id,
+        fullName: `${p.lastName}, ${p.firstName}`,
+        categoryName: p.categoryName || "Sin categoría",
+        familyId: p.familyId,
+        familyName: p.familyName,
+        expiresAt: p.expiresAt,
+        daysExpired: days,
+      });
+    } else {
+      validCount++;
+    }
+  }
+
+  const totalActivePlayers = rows.length;
+  const compliancePct =
+    totalActivePlayers > 0 ? Math.round((validCount / totalActivePlayers) * 100) : 0;
+
+  // Ordenar los vencidos: primero los que tienen fecha vencida (de más reciente a más antiguo), luego los sin certificado
+  expiredPlayers.sort((a, b) => {
+    if (a.expiresAt && b.expiresAt) {
+      return a.expiresAt.localeCompare(b.expiresAt);
+    }
+    return a.expiresAt ? -1 : 1;
+  });
+
+  return {
+    validCount,
+    expiredCount,
+    missingCount,
+    totalActivePlayers,
+    compliancePct,
+    expiredPlayers: expiredPlayers.slice(0, 30),
+  };
+}
+
+export type BasketballSeasonSummary = {
+  totalMatches: number;
+  playedMatches: number;
+  scheduledMatches: number;
+  wonMatches: number;
+  lostMatches: number;
+  winRatePct: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  pointDiff: number;
+  categoryStats: {
+    categoryId: string;
+    categoryName: string;
+    categoryGender: string;
+    total: number;
+    won: number;
+    lost: number;
+    pointsFor: number;
+    pointsAgainst: number;
+  }[];
+};
+
+export async function getBasketballSeasonReport(
+  ctx: TenantContext,
+): Promise<BasketballSeasonSummary> {
+  const matchList = await db
+    .select({
+      id: matches.id,
+      status: matches.status,
+      categoryId: matches.categoryId,
+      categoryName: categories.name,
+      categoryGender: categories.gender,
+      ourScore: matches.ourScore,
+      rivalScore: matches.rivalScore,
+    })
+    .from(matches)
+    .leftJoin(categories, eq(categories.id, matches.categoryId))
+    .where(eq(matches.clubId, ctx.club.id));
+
+  let playedMatches = 0;
+  let scheduledMatches = 0;
+  let wonMatches = 0;
+  let lostMatches = 0;
+  let pointsFor = 0;
+  let pointsAgainst = 0;
+
+  const catMap = new Map<
+    string,
+    {
+      categoryId: string;
+      categoryName: string;
+      categoryGender: string;
+      total: number;
+      won: number;
+      lost: number;
+      pointsFor: number;
+      pointsAgainst: number;
+    }
+  >();
+
+  for (const m of matchList) {
+    if (m.status === "scheduled") {
+      scheduledMatches++;
+    } else if (m.status === "played") {
+      playedMatches++;
+      const our = m.ourScore ?? 0;
+      const riv = m.rivalScore ?? 0;
+      pointsFor += our;
+      pointsAgainst += riv;
+
+      const won = our > riv;
+      const lost = our < riv;
+      if (won) wonMatches++;
+      if (lost) lostMatches++;
+
+      if (m.categoryId) {
+        const cat = catMap.get(m.categoryId) ?? {
+          categoryId: m.categoryId,
+          categoryName: m.categoryName || "General",
+          categoryGender: m.categoryGender || "mixed",
+          total: 0,
+          won: 0,
+          lost: 0,
+          pointsFor: 0,
+          pointsAgainst: 0,
+        };
+        cat.total++;
+        if (won) cat.won++;
+        if (lost) cat.lost++;
+        cat.pointsFor += our;
+        cat.pointsAgainst += riv;
+        catMap.set(m.categoryId, cat);
+      }
+    }
+  }
+
+  const winRatePct =
+    playedMatches > 0 ? Math.round((wonMatches / playedMatches) * 100) : 0;
+
+  return {
+    totalMatches: matchList.length,
+    playedMatches,
+    scheduledMatches,
+    wonMatches,
+    lostMatches,
+    winRatePct,
+    pointsFor,
+    pointsAgainst,
+    pointDiff: pointsFor - pointsAgainst,
+    categoryStats: Array.from(catMap.values()).sort((a, b) =>
+      a.categoryName.localeCompare(b.categoryName),
+    ),
+  };
 }

@@ -118,6 +118,9 @@ export async function getTraining(ctx: TenantContext, trainingId: string) {
       firstName: players.firstName,
       lastName: players.lastName,
       jerseyNumber: players.jerseyNumber,
+      birthDate: players.birthDate,
+      position: players.position,
+      medicalCertificateExpiresAt: players.medicalCertificateExpiresAt,
       attendanceStatus: attendance.status,
       attendanceNote: attendance.note,
     })
@@ -136,6 +139,94 @@ export async function getTraining(ctx: TenantContext, trainingId: string) {
     .orderBy(asc(players.lastName), asc(players.firstName));
 
   return { training, roster };
+}
+
+export async function getAttendanceHubData(ctx: TenantContext) {
+  const where = [
+    eq(trainings.clubId, ctx.club.id),
+    categoryScope(ctx, trainings.categoryId),
+  ];
+
+  // Listado de sesiones recientes
+  const recentTrainings = await db
+    .select({
+      id: trainings.id,
+      title: trainings.title,
+      startsAt: trainings.startsAt,
+      endsAt: trainings.endsAt,
+      location: trainings.location,
+      notes: trainings.notes,
+      status: trainings.status,
+      categoryId: trainings.categoryId,
+      categoryName: categories.name,
+      categoryGender: categories.gender,
+      coachName: users.fullName,
+      totalPlayers: sql<number>`(
+        select count(*) from players p
+        where p.category_id = ${trainings.categoryId} and p.status = 'active'
+      )::int`,
+      presentCount: sql<number>`(
+        select count(*) from attendance a
+        where a.training_id = ${trainings.id} and a.status in ('present', 'late')
+      )::int`,
+      absentCount: sql<number>`(
+        select count(*) from attendance a
+        where a.training_id = ${trainings.id} and a.status = 'absent'
+      )::int`,
+      recordedCount: sql<number>`(
+        select count(*) from attendance a
+        where a.training_id = ${trainings.id}
+      )::int`,
+    })
+    .from(trainings)
+    .innerJoin(categories, eq(categories.id, trainings.categoryId))
+    .leftJoin(memberships, eq(memberships.id, trainings.coachMembershipId))
+    .leftJoin(users, eq(users.id, memberships.userId))
+    .where(and(...where))
+    .orderBy(desc(trainings.startsAt))
+    .limit(20);
+
+  // Categorías activas accesibles por el usuario
+  const accessibleCategories = await db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      gender: categories.gender,
+      sport: categories.sport,
+    })
+    .from(categories)
+    .where(
+      and(
+        eq(categories.clubId, ctx.club.id),
+        eq(categories.isActive, true),
+        categoryScope(ctx, categories.id),
+      ),
+    )
+    .orderBy(asc(categories.name));
+
+  // Métricas globales de asistencia
+  const totalSessions = recentTrainings.length;
+  let totalPresent = 0;
+  let totalRecorded = 0;
+
+  for (const t of recentTrainings) {
+    totalPresent += t.presentCount;
+    totalRecorded += t.recordedCount;
+  }
+
+  const averageAttendancePct =
+    totalRecorded > 0 ? Math.round((totalPresent / totalRecorded) * 100) : 0;
+
+  return {
+    recentTrainings,
+    accessibleCategories,
+    stats: {
+      totalSessions,
+      totalPresent,
+      totalRecorded,
+      averageAttendancePct,
+    },
+  };
 }
 
 export type MatchFilters = {
@@ -191,6 +282,51 @@ export async function listMatches(ctx: TenantContext, filters: MatchFilters = {}
   return rows;
 }
 
+export async function getMatchesHubData(ctx: TenantContext, filters: MatchFilters = {}) {
+  const matchesList = await listMatches(ctx, filters);
+
+  const played = matchesList.filter((m) => m.status === "played" && m.ourScore !== null && m.rivalScore !== null);
+  const upcoming = matchesList.filter((m) => m.status === "scheduled");
+
+  let wonCount = 0;
+  let lostCount = 0;
+  let tieCount = 0;
+  let totalPointsFor = 0;
+  let totalPointsAgainst = 0;
+
+  for (const m of played) {
+    const us = m.ourScore ?? 0;
+    const them = m.rivalScore ?? 0;
+    totalPointsFor += us;
+    totalPointsAgainst += them;
+    if (us > them) wonCount++;
+    else if (us < them) lostCount++;
+    else tieCount++;
+  }
+
+  const playedCount = played.length;
+  const winRatePct = playedCount > 0 ? Math.round((wonCount / playedCount) * 100) : 0;
+  const avgPointsFor = playedCount > 0 ? Math.round(totalPointsFor / playedCount) : 0;
+  const avgPointsAgainst = playedCount > 0 ? Math.round(totalPointsAgainst / playedCount) : 0;
+
+  return {
+    matches: matchesList,
+    stats: {
+      totalCount: matchesList.length,
+      playedCount,
+      upcomingCount: upcoming.length,
+      wonCount,
+      lostCount,
+      tieCount,
+      totalPointsFor,
+      totalPointsAgainst,
+      winRatePct,
+      avgPointsFor,
+      avgPointsAgainst,
+    },
+  };
+}
+
 export async function getMatch(ctx: TenantContext, matchId: string) {
   const [match] = await db
     .select({
@@ -230,7 +366,12 @@ export async function getMatch(ctx: TenantContext, matchId: string) {
       id: players.id,
       firstName: players.firstName,
       lastName: players.lastName,
+      dni: players.dni,
+      birthDate: players.birthDate,
       jerseyNumber: players.jerseyNumber,
+      position: players.position,
+      medicalCertificateExpiresAt: players.medicalCertificateExpiresAt,
+      emergencyContactPhone: players.emergencyContactPhone,
       callupStatus: callups.status,
       callupNote: callups.note,
       callupId: callups.id,
@@ -322,6 +463,10 @@ export async function getTrip(ctx: TenantContext, tripId: string) {
       firstName: players.firstName,
       lastName: players.lastName,
       jerseyNumber: players.jerseyNumber,
+      dni: players.dni,
+      emergencyContactName: players.emergencyContactName,
+      emergencyContactPhone: players.emergencyContactPhone,
+      medicalCertificateExpiresAt: players.medicalCertificateExpiresAt,
       status: tripPassengers.status,
       paymentStatus: tripPassengers.paymentStatus,
       paymentNote: tripPassengers.paymentNote,

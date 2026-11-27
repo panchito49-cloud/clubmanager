@@ -1,12 +1,15 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader, NoAccess, Flash } from "@/components/ui/page";
 import { Card, CardHeader, CardBody } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Icon } from "@/components/ui/icon";
 import { formatDateTime } from "@/lib/format";
+import { getMedicalCertificateInfo } from "@/lib/medical";
 import { can, getTenant } from "@/server/tenant";
 import { getTraining } from "@/server/data/sports";
 import { markAllAttendanceAction, recordAttendanceAction } from "@/app/actions/sports";
+import { VenueMapCard } from "@/components/sports/venue-map-card";
 
 export const metadata = { title: "Toma de Asistencia" };
 
@@ -45,9 +48,17 @@ export default async function TrainingDetailPage({
         backHref="/app/calendario"
         backLabel="Calendario"
         actions={
-          <Badge tone={training.status === "completed" ? "success" : "info"}>
-            {training.status === "completed" ? "Realizado" : "Programado"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/app/asistencias/${training.id}`}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 py-2 text-xs font-bold text-white shadow-xs hover:bg-brand-700"
+            >
+              📱 Abrir planilla táctil de cancha
+            </Link>
+            <Badge tone={training.status === "completed" ? "success" : "info"}>
+              {training.status === "completed" ? "Realizado" : "Programado"}
+            </Badge>
+          </div>
         }
       />
 
@@ -74,6 +85,13 @@ export default async function TrainingDetailPage({
           <p className="mt-1 text-xl font-bold text-brand-700">{pct}%</p>
         </div>
       </div>
+
+      {/* Ubicación de la cancha y navegación GPS */}
+      <VenueMapCard
+        isHome={true}
+        location={training.location || "Estadio Centenario - Calle 33 N° 334, Mercedes"}
+        startsAt={training.startsAt}
+      />
 
       {canRecord && roster.length > 0 ? (
         <Card className="bg-brand-50/40 p-3 sm:p-4">
@@ -125,9 +143,21 @@ export default async function TrainingDetailPage({
                     {player.jerseyNumber ? `#${player.jerseyNumber}` : "•"}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-ink-900">
-                      {player.lastName}, {player.firstName}
-                    </p>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <p className="text-sm font-semibold text-ink-900">
+                        {player.lastName}, {player.firstName}
+                      </p>
+                      {(() => {
+                        const med = getMedicalCertificateInfo(player.medicalCertificateExpiresAt);
+                        return (
+                          <span
+                            className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium border ${med.badgeClass}`}
+                          >
+                            {med.status === "valid" ? "🟢" : med.status === "warning" ? "🟡" : "🔴"} {med.label}
+                          </span>
+                        );
+                      })()}
+                    </div>
                     <p className="text-xs text-ink-500">
                       Estado:{" "}
                       {player.attendanceStatus === "present"

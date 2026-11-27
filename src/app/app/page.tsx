@@ -8,6 +8,8 @@ import { ButtonLink } from "@/components/ui/button";
 import { formatMoney, formatDateTime, monthLabel } from "@/lib/format";
 import { roleLabel } from "@/lib/permissions";
 import { getTenant, can } from "@/server/tenant";
+import { getGuardianPortalData } from "@/server/data/portal";
+import { GuardianPortal } from "@/components/portal/guardian-portal";
 import {
   getCollectionTrend,
   getCounts,
@@ -22,6 +24,20 @@ export const metadata = { title: "Panel" };
 
 export default async function DashboardPage() {
   const ctx = await getTenant();
+
+  if (ctx.role === "guardian") {
+    const portalData = await getGuardianPortalData(ctx);
+    if (portalData) {
+      return (
+        <GuardianPortal
+          data={portalData}
+          clubId={ctx.club.id}
+          clubName={ctx.club.name}
+        />
+      );
+    }
+  }
+
   const isStaff = ctx.role === "club_admin" || ctx.role === "coach";
 
   const [finance, counts, events, announcements, unread] = await Promise.all([

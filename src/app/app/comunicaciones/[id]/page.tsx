@@ -2,14 +2,13 @@ import { notFound } from "next/navigation";
 import { PageHeader, NoAccess, Flash, Alert } from "@/components/ui/page";
 import { Card, CardBody, CardHeader, DefinitionList } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { SubmitButton } from "@/components/ui/submit";
 import { Icon } from "@/components/ui/icon";
 import { formatDateTime } from "@/lib/format";
 import { can, getTenant } from "@/server/tenant";
-import { getAnnouncement } from "@/server/data/comms";
-import { sendAnnouncementAction } from "@/app/actions/comms";
+import { getAnnouncementRecipients } from "@/server/data/comms";
+import { WhatsAppBroadcaster } from "@/components/comms/whatsapp-broadcaster";
 
-export const metadata = { title: "Detalle de comunicación" };
+export const metadata = { title: "Detalle de Comunicación y Difusión" };
 
 function audienceLabel(audience: string, categoryName?: string | null, gender?: string | null): string {
   switch (audience) {
@@ -43,7 +42,14 @@ export default async function AnnouncementDetailPage({
   const { id } = await params;
   const { ok, error } = await searchParams;
 
-  const announcement = await getAnnouncement(ctx, id);
+  let commsData;
+  try {
+    commsData = await getAnnouncementRecipients(ctx, id);
+  } catch {
+    notFound();
+  }
+
+  const { announcement, recipients, shareGroupWaUrl, fullMessageText } = commsData;
   if (!announcement) notFound();
 
   const isDraft = announcement.status === "draft";
@@ -53,13 +59,18 @@ export default async function AnnouncementDetailPage({
     <div className="mx-auto max-w-3xl space-y-6">
       <PageHeader
         title={announcement.title}
-        description="Ficha del comunicado institucional y estado de entrega."
+        description="Ficha del comunicado institucional y consola de difusión por WhatsApp."
         backHref="/app/comunicaciones"
         backLabel="Comunicaciones"
         actions={
-          <Badge tone={isDraft ? "warning" : "success"}>
-            {isDraft ? "Borrador pendiente de envío" : "Enviado"}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge tone={announcement.channel === "whatsapp" ? "success" : "info"}>
+              {announcement.channel === "whatsapp" ? "WhatsApp Oficial" : "In-App"}
+            </Badge>
+            <Badge tone={isDraft ? "warning" : "success"}>
+              {isDraft ? "Borrador pendiente" : "Emitido"}
+            </Badge>
+          </div>
         }
       />
 
@@ -67,28 +78,34 @@ export default async function AnnouncementDetailPage({
 
       {isDraft ? (
         <Alert tone="info">
-          Este comunicado está guardado como <strong>borrador</strong>. No ha sido entregado a los destinatarios todavía. Podés enviarlo cuando estés listo.
+          Este comunicado está listo como <strong>borrador institucional</strong>. Podés compartirlo en el grupo de WhatsApp de la categoría o enviarlo 1-a-1 a cada familia desde el panel de abajo.
         </Alert>
       ) : (
         <Alert tone="success">
-          Comunicado emitido el <strong>{formatDateTime(announcement.sentAt)}</strong> a{" "}
+          Comunicado emitido formalmente el <strong>{formatDateTime(announcement.sentAt)}</strong> a{" "}
           <strong>{announcement.recipientCount}</strong> destinatario(s).
         </Alert>
       )}
 
+      {/* Panel de Difusión de WhatsApp con vista previa y bandeja de destinatarios */}
+      <WhatsAppBroadcaster
+        announcementId={announcement.id}
+        title={announcement.title}
+        body={announcement.body}
+        fullMessageText={fullMessageText}
+        shareGroupWaUrl={shareGroupWaUrl}
+        isDraft={isDraft}
+        canSend={canSend}
+        recipients={recipients}
+      />
+
+      {/* Ficha técnica del comunicado */}
       <Card>
         <CardHeader
-          title="Contenido del mensaje"
-          description={`Creado por ${announcement.authorName || "Staff"} · ${formatDateTime(announcement.createdAt)}`}
+          title="Ficha Técnica del Comunicado"
+          description={`Emitido por ${announcement.authorName || "Secretaría del Club"} · Creado el ${formatDateTime(announcement.createdAt)}`}
         />
-        <CardBody className="space-y-6">
-          <div className="rounded-xl border border-ink-100 bg-ink-50/50 p-5">
-            <h3 className="mb-2 text-base font-bold text-ink-900">{announcement.title}</h3>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-ink-800">
-              {announcement.body}
-            </p>
-          </div>
-
+        <CardBody>
           <DefinitionList
             items={[
               {
@@ -103,15 +120,7 @@ export default async function AnnouncementDetailPage({
                 label: "Canal",
                 value: (
                   <span className="inline-flex items-center gap-1.5 font-medium text-ink-800">
-                    {announcement.channel === "whatsapp" ? (
-                      <>
-                        <Icon name="phone" size={14} /> WhatsApp
-                      </>
-                    ) : (
-                      <>
-                        <Icon name="bell" size={14} /> Bandeja interna (In-App)
-                      </>
-                    )}
+                    <Icon name="phone" size={14} /> WhatsApp Institucional + Notificación
                   </span>
                 ),
               },
@@ -119,15 +128,15 @@ export default async function AnnouncementDetailPage({
                 label: "Estado",
                 value: (
                   <Badge tone={isDraft ? "warning" : "success"}>
-                    {isDraft ? "Borrador" : "Enviado"}
+                    {isDraft ? "Borrador listo" : "Emitido"}
                   </Badge>
                 ),
               },
               {
-                label: "Destinatarios notificados",
+                label: "Familias alcanzadas",
                 value: (
                   <span className="font-semibold text-ink-900">
-                    {announcement.recipientCount} usuarios
+                    {recipients.length} destinatarios
                   </span>
                 ),
               },
@@ -145,20 +154,6 @@ export default async function AnnouncementDetailPage({
                 : []),
             ]}
           />
-
-          {isDraft && canSend ? (
-            <div className="border-t border-ink-100 pt-5">
-              <form action={sendAnnouncementAction} className="flex items-center justify-between">
-                <input type="hidden" name="announcementId" value={announcement.id} />
-                <p className="text-xs text-ink-500">
-                  Al enviar, se generará una notificación interna en la bandeja de cada miembro de la audiencia seleccionada.
-                </p>
-                <SubmitButton variant="primary">
-                  <Icon name="megaphone" size={15} /> Enviar ahora
-                </SubmitButton>
-              </form>
-            </div>
-          ) : null}
         </CardBody>
       </Card>
     </div>

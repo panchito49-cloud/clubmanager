@@ -23,15 +23,19 @@ function Brand({
 }) {
   return (
     <Link href={variant === "platform" ? "/admin" : "/app"} className="flex items-center gap-2.5 px-3">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-brand-400 to-brand-700 text-sm font-bold text-white shadow-sm">
-        CM
-      </span>
+      <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-red-600 bg-white shadow-sm">
+        <img
+          src="/logo-estudiantes-basquet.jpg"
+          alt="Club Atlético Estudiantes Básquet"
+          className="h-full w-full object-cover object-center"
+        />
+      </div>
       <span className="min-w-0">
-        <span className="block text-sm font-semibold leading-tight text-white">
-          ClubManager
+        <span className="block text-sm font-bold leading-tight text-white">
+          {variant === "platform" ? "ClubManager" : "C.A. Estudiantes"}
         </span>
-        <span className="block truncate text-[11px] leading-tight text-ink-400">
-          {variant === "platform" ? "Panel de plataforma" : clubName}
+        <span className="block truncate text-[11px] leading-tight text-red-400">
+          {variant === "platform" ? "Panel de plataforma" : "Básquet Mercedes (B)"}
         </span>
       </span>
     </Link>

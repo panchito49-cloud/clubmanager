@@ -6,6 +6,7 @@ import { createMatchAction } from "@/app/actions/sports";
 import { can, getTenant } from "@/server/tenant";
 import { listCategories } from "@/server/data/people";
 import { todayISO } from "@/lib/format";
+import { VenueSelector } from "@/components/sports/venue-selector";
 
 export const metadata = { title: "Nuevo partido" };
 
@@ -19,7 +20,7 @@ export default async function NewMatchPage() {
     <div className="mx-auto max-w-2xl">
       <PageHeader
         title="Programar partido"
-        description="Agendá un nuevo cotejo deportivo vs rival para la categoría."
+        description="Agendá un nuevo cotejo deportivo vs rival para la categoría, con geolocalización de cancha en Google Maps."
         backHref="/app/partidos"
         backLabel="Partidos"
       />
@@ -32,10 +33,6 @@ export default async function NewMatchPage() {
             cancelHref="/app/partidos"
           >
             <div className="space-y-4">
-              <Field label="Rival" htmlFor="rival" required hint="Nombre del club o equipo adversario.">
-                <Input id="rival" name="rival" placeholder="Ej: Club Social y Deportivo Lanús" required />
-              </Field>
-
               <Field label="Categoría" htmlFor="categoryId" required>
                 <Select id="categoryId" name="categoryId" required defaultValue="">
                   <option value="" disabled>
@@ -67,21 +64,8 @@ export default async function NewMatchPage() {
                 </Field>
               </InlineFields>
 
-              <InlineFields>
-                <Field label="Condición" htmlFor="isHome" required>
-                  <Select id="isHome" name="isHome" defaultValue="true">
-                    <option value="true">Local (en nuestro club)</option>
-                    <option value="false">Visitante (en cancha rival)</option>
-                  </Select>
-                </Field>
-                <Field label="Lugar / Dirección" htmlFor="location">
-                  <Input
-                    id="location"
-                    name="location"
-                    placeholder="Ej: Estadio Club Atenas, La Plata"
-                  />
-                </Field>
-              </InlineFields>
+              {/* Selector inteligente de localía y sedes con Google Maps */}
+              <VenueSelector />
 
               <Field label="Indicaciones para la citación" htmlFor="notes">
                 <Textarea
