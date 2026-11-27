@@ -186,21 +186,21 @@ async function main() {
     .insert(clubs)
     .values({
       slug: DEMO_SLUG,
-      name: "Club Atlético Barrio Norte (demo)",
-      city: "Lanús",
+      name: "Club Atlético Estudiantes",
+      city: "Mercedes",
       province: "Buenos Aires",
       status: "active",
       planId: clubPlan.id,
       settings: {
-        address: "Av. Hipólito Yrigoyen 1200",
-        phone: "+54 11 4000-0000",
-        email: "administracion@barrio-norte.demo",
-        cuit: "30-00000000-0",
+        address: "Calle 33 N° 334",
+        phone: "+54 2324 00-0000",
+        email: "administracion@caestudiantes.demo",
+        cuit: "30-50000000-0",
         siblingDiscountPct: 20,
         graceDays: 5,
         billingDay: 10,
         remindersEnabled: false,
-        notes: "Club de demostración generado por el seed. No usar con datos reales.",
+        notes: "Club Atlético Estudiantes de Mercedes (Básquet).",
       },
     })
     .returning();
@@ -405,6 +405,12 @@ async function main() {
           emergencyContactName: f.contactName,
           emergencyContactPhone: f.contactPhone,
           insuranceProvider: "Obra Social Provincia",
+          medicalCertificateExpiresAt:
+            index % 3 === 0
+              ? "2027-04-15" // Vigente
+              : index % 3 === 1
+                ? "2026-12-10" // Por vencer
+                : "2026-10-01", // Vencido
         })
         .returning({ id: players.id });
 
@@ -473,7 +479,12 @@ async function main() {
     const planForCat = feePlanIds.get(p.cat);
     if (!planForCat) continue;
 
-    for (const targetPeriod of [previous, period]) {
+    const isSosa = p.familyId === familyIds.get("Familia Sosa");
+    const periodsToGenerate = isSosa
+      ? [shiftMonth(period, -4), shiftMonth(period, -3), previous, period]
+      : [previous, period];
+
+    for (const targetPeriod of periodsToGenerate) {
       const amounts = computeChargeAmounts({
         amountCents: planForCat.amount,
         discount: p.scholarship > 0 ? { type: "percentage", value: p.scholarship } : null,
@@ -623,52 +634,136 @@ async function main() {
   }
 
   // Partidos y convocatorias ------------------------------------------------
-  const [upcomingMatch] = await db
+  // 1. Partido Jugado U15 vs Quilmes de Mercedes (Clásico local)
+  const [matchU15Played] = await db
     .insert(matches)
     .values({
       clubId: club.id,
       categoryId: u15,
       coachMembershipId: membershipIds.get("martin.ferreyra@barrio-norte.demo"),
-      rival: "Club Social y Deportivo El Fortín",
-      startsAt: atLocal(addDays(today, 7), "10:00"),
-      location: "Estadio cubierto - Cancha 1",
+      rival: "Club Quilmes de Mercedes",
+      startsAt: atLocal(addDays(today, -10), "18:30"),
+      location: "Estadio Centenario - Cancha 1 (Calle 33 N° 334)",
       isHome: true,
-      status: "scheduled",
+      status: "played",
+      ourScore: 74,
+      rivalScore: 68,
+      notes: "Gran último cuarto defensivo. Triunfo en el clásico mercedino con destacada actuación perimetral.",
     })
     .returning({ id: matches.id });
 
   for (const p of u15Players) {
     await db.insert(callups).values({
       clubId: club.id,
-      matchId: upcomingMatch.id,
+      matchId: matchU15Played.id,
       playerId: p.id,
-      status: "invited",
+      status: "confirmed",
     });
   }
 
+  // 2. Partido Jugado U17 vs Club Mercedes
   const u17Players = playerRows.filter((p) => p.cat === "U17");
-  const [playedMatch] = await db
+  const [matchU17Played] = await db
     .insert(matches)
     .values({
       clubId: club.id,
       categoryId: u17,
       coachMembershipId: membershipIds.get("martin.ferreyra@barrio-norte.demo"),
-      rival: "Los Indios de Moreno",
-      startsAt: atLocal(addDays(today, -7), "19:30"),
-      location: "Club Los Indios",
+      rival: "Club Mercedes",
+      startsAt: atLocal(addDays(today, -5), "20:00"),
+      location: "Gimnasio Club Mercedes",
       isHome: false,
       status: "played",
-      ourScore: 68,
-      rivalScore: 61,
+      ourScore: 65,
+      rivalScore: 71,
+      notes: "Cotejo parejo y de mucha intensidad física que se definió en las últimas posesiones.",
     })
     .returning({ id: matches.id });
 
   for (const p of u17Players) {
     await db.insert(callups).values({
       clubId: club.id,
-      matchId: playedMatch.id,
+      matchId: matchU17Played.id,
       playerId: p.id,
       status: "confirmed",
+    });
+  }
+
+  // 3. Partido Jugado Primera vs San Martín
+  const primeraPlayers = playerRows.filter((p) => p.cat === "Primera");
+  const [matchPrimeraPlayed] = await db
+    .insert(matches)
+    .values({
+      clubId: club.id,
+      categoryId: primera,
+      coachMembershipId: membershipIds.get("lucia.benitez@barrio-norte.demo"),
+      rival: "San Martín de Junín",
+      startsAt: atLocal(addDays(today, -2), "21:30"),
+      location: "Estadio Centenario - Cancha 1 (Calle 33 N° 334)",
+      isHome: true,
+      status: "played",
+      ourScore: 82,
+      rivalScore: 76,
+      notes: "Sólida victoria de Primera División con gran efectividad desde la línea de triples (11 triples).",
+    })
+    .returning({ id: matches.id });
+
+  for (const p of primeraPlayers.slice(0, 12)) {
+    await db.insert(callups).values({
+      clubId: club.id,
+      matchId: matchPrimeraPlayed.id,
+      playerId: p.id,
+      status: "confirmed",
+    });
+  }
+
+  // 4. Próximo Partido U15 vs Colón de Chivilcoy (Fixture)
+  const [upcomingMatchU15] = await db
+    .insert(matches)
+    .values({
+      clubId: club.id,
+      categoryId: u15,
+      coachMembershipId: membershipIds.get("martin.ferreyra@barrio-norte.demo"),
+      rival: "Deportivo Colón de Chivilcoy",
+      startsAt: atLocal(addDays(today, 3), "18:30"),
+      location: "Estadio Centenario - Cancha 1 (Calle 33 N° 334)",
+      isHome: true,
+      status: "scheduled",
+      notes: "Citación 17:30hs en vestuarios. Traer indumentaria titular roja completa.",
+    })
+    .returning({ id: matches.id });
+
+  for (const p of u15Players) {
+    await db.insert(callups).values({
+      clubId: club.id,
+      matchId: upcomingMatchU15.id,
+      playerId: p.id,
+      status: "invited",
+    });
+  }
+
+  // 5. Próximo Partido U17 vs Ateneo de la Juventud (Fixture)
+  const [upcomingMatchU17] = await db
+    .insert(matches)
+    .values({
+      clubId: club.id,
+      categoryId: u17,
+      coachMembershipId: membershipIds.get("martin.ferreyra@barrio-norte.demo"),
+      rival: "Ateneo de la Juventud de Mercedes",
+      startsAt: atLocal(addDays(today, 4), "11:00"),
+      location: "Gimnasio Ateneo de la Juventud",
+      isHome: false,
+      status: "scheduled",
+      notes: "Punto de encuentro en el club 09:45hs para trasladarnos juntos.",
+    })
+    .returning({ id: matches.id });
+
+  for (const p of u17Players) {
+    await db.insert(callups).values({
+      clubId: club.id,
+      matchId: upcomingMatchU17.id,
+      playerId: p.id,
+      status: "invited",
     });
   }
 
@@ -704,17 +799,47 @@ async function main() {
   }
 
   // Comunicaciones ----------------------------------------------------------
-  const [announcement] = await db
+  const [announcement1] = await db
     .insert(announcements)
     .values({
       clubId: club.id,
-      title: "Inicio del torneo de verano",
-      body: "Este fin de semana comienza el torneo de verano. Las planillas de convocatoria ya están disponibles en la sección Partidos. Cualquier consulta, escribirle al entrenador de la categoría.",
-      audience: "all",
-      channel: "in_app",
+      title: "Convocatoria vs Deportivo Colón de Chivilcoy",
+      body: "Hola familias! Los convocamos para el partido de U15 este sábado 18:30 hs en nuestro Estadio Centenario (Calle 33 N° 334). Indumentaria titular roja completa. Citación 17:30 hs en vestuarios. Por favor confirmar asistencia.",
+      audience: "category",
+      categoryId: u15,
+      channel: "whatsapp",
+      status: "draft",
+      recipientCount: 0,
+      createdByUserId: userIds.get("martin.ferreyra@barrio-norte.demo"),
+    })
+    .returning({ id: announcements.id });
+
+  const [announcement2] = await db
+    .insert(announcements)
+    .values({
+      clubId: club.id,
+      title: "Regularización de Apto Médico (EMDAP) Temporada Centenario",
+      body: "Estimadas familias: Por normativa reglamentaria obligatoria de la Federación de Básquetbol, recordamos que todos los jugadores deben contar con el certificado médico EMDAP vigente para poder disputar encuentros oficiales. Acercar el certificado a secretaría (Calle 33 N° 334) o cargarlo en el portal.",
+      audience: "families",
+      channel: "whatsapp",
       status: "sent",
-      recipientCount: 4,
-      sentAt: new Date(),
+      recipientCount: 12,
+      sentAt: atLocal(addDays(today, -3), "18:00"),
+      createdByUserId: userIds.get("admin@barrio-norte.demo"),
+    })
+    .returning({ id: announcements.id });
+
+  const [announcement3] = await db
+    .insert(announcements)
+    .values({
+      clubId: club.id,
+      title: "Festejos del Centenario (1926-2026) y Torneo de Básquet",
+      body: "Comunidad de Estudiantes de Mercedes: Los invitamos a participar de los eventos y partidos conmemorativos de nuestro Centenario. Venta de indumentaria conmemorativa disponible en la sede central de Calle 33 N° 334.",
+      audience: "all",
+      channel: "whatsapp",
+      status: "sent",
+      recipientCount: 16,
+      sentAt: atLocal(addDays(today, -8), "12:00"),
       createdByUserId: userIds.get("admin@barrio-norte.demo"),
     })
     .returning({ id: announcements.id });
@@ -727,9 +852,9 @@ async function main() {
     await db.insert(notifications).values({
       clubId: club.id,
       userId: userIds.get(email)!,
-      title: "Inicio del torneo de verano",
-      body: "Ya está disponible el calendario del torneo.",
-      link: "/app/calendario",
+      title: "Regularización de Apto Médico (EMDAP)",
+      body: "Por favor revisar el vencimiento del apto médico de sus hijos.",
+      link: "/app/portal",
     });
   }
 

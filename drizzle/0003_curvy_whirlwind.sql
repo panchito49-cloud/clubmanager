@@ -1,0 +1,1 @@
+ALTER TABLE "players" ADD COLUMN "medical_certificate_expires_at" date;

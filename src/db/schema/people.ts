@@ -141,6 +141,7 @@ export const players = pgTable(
     bloodType: text(),
     insuranceProvider: text(),
     insuranceNumber: text(),
+    medicalCertificateExpiresAt: date(),
     /** Informacion medica sensible: visible solo para staff del club. */
     medicalNotes: text(),
     joinedAt: date(),
