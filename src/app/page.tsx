@@ -265,7 +265,7 @@ export default async function LandingPage() {
               {[
                 { name: "Escuelita & Pre-Mini", age: "4 a 9 años", desc: "Iniciación lúdica, coordinación y valores de equipo.", tag: "Masc / Fem" },
                 { name: "Mini Básquet", age: "10 a 12 años", desc: "Fundamentos técnicos, pase, dribling y juego colectivo.", tag: "Masc / Fem" },
-                { name: "Formatívas U13 & U15", age: "13 a 15 años", desc: "Inicio de competencia oficial, táctica y preparación física.", tag: "Masc / Fem" },
+                { name: "Formativas U13 & U15", age: "13 a 15 años", desc: "Inicio de competencia oficial, táctica y preparación física.", tag: "Masc / Fem" },
                 { name: "Juveniles U17 & U21", age: "16 a 21 años", desc: "Alta competencia de la liga, proyección y entrenamientos intensivos.", tag: "Masc / Fem" },
               ].map((c) => (
                 <div key={c.name} className="rounded-2xl border border-ink-800 bg-ink-900/60 p-5 space-y-2 hover:border-brand-500/40 transition">
@@ -337,10 +337,10 @@ export default async function LandingPage() {
                         <span className="text-ink-400">{formatDateTime(m.startsAt)}</span>
                       </div>
 
-                      <div className="flex items-center justify-between py-2 border-y border-ink-800">
+                      <div className="flex items-center justify-between gap-1.5 py-2.5 border-y border-ink-800">
                         {/* Estudiantes */}
-                        <div className="flex items-center gap-2">
-                          <div className="relative h-8 w-8 overflow-hidden rounded-full border border-ink-700 bg-white flex-shrink-0">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <div className="relative h-7 w-7 overflow-hidden rounded-full border border-ink-700 bg-white flex-shrink-0">
                             <Image
                               src="/escudo-estudiantes-basquet-hd.png"
                               alt="Estudiantes"
@@ -348,17 +348,17 @@ export default async function LandingPage() {
                               className="object-contain p-0.5"
                             />
                           </div>
-                          <span className="text-xs font-bold text-white">Estudiantes</span>
+                          <span className="text-[11px] font-bold text-white truncate">CAE</span>
                         </div>
 
-                        <span className="text-xs font-black text-ink-500">VS</span>
+                        <span className="text-[10px] font-black text-amber-400/80 px-1">VS</span>
 
                         {/* Rival */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-white truncate max-w-[80px]">
+                        <div className="flex items-center justify-end gap-1.5 min-w-0">
+                          <span className="text-[11px] font-bold text-white truncate text-right">
                             {m.rival}
                           </span>
-                          <div className="relative h-8 w-8 overflow-hidden rounded-full border border-ink-700 bg-white flex-shrink-0">
+                          <div className="relative h-7 w-7 overflow-hidden rounded-full border border-ink-700 bg-white flex-shrink-0">
                             <Image
                               src={rivalBadge}
                               alt={m.rival}

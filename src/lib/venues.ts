@@ -28,7 +28,7 @@ export const HOME_VENUE: VenueInfo = {
   name: "Club Atlético Estudiantes",
   clubName: "Club Atlético Estudiantes de Mercedes",
   shortName: "Estudiantes",
-  badgeUrl: "/escudos/estudiantes.png",
+  badgeUrl: "/escudo-estudiantes-basquet-hd.png",
   courtName: "Estadio Centenario - Cancha 1",
   address: "Calle 33 N° 334",
   city: "Mercedes",
