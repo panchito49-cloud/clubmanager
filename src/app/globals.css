@@ -4,28 +4,30 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
-  --color-brand-50: #eefaf6;
-  --color-brand-100: #d5f3e8;
-  --color-brand-200: #ade6d4;
-  --color-brand-300: #79d2ba;
-  --color-brand-400: #45b89e;
-  --color-brand-500: #1f9a82;
-  --color-brand-600: #0f7c69;
-  --color-brand-700: #0d6355;
-  --color-brand-800: #0c4f45;
-  --color-brand-900: #0a423a;
+  /* Paleta Principal: Rojo Estudiantes de Mercedes */
+  --color-brand-50: #fef2f2;
+  --color-brand-100: #fee2e2;
+  --color-brand-200: #fecaca;
+  --color-brand-300: #fca5a5;
+  --color-brand-400: #f87171;
+  --color-brand-500: #ef4444;
+  --color-brand-600: #dc2626;
+  --color-brand-700: #b91c1c;
+  --color-brand-800: #991b1b;
+  --color-brand-900: #7f1d1d;
 
-  --color-ink-50: #f6f7f9;
-  --color-ink-100: #eceef2;
-  --color-ink-200: #d5dae3;
-  --color-ink-300: #b0b9c8;
-  --color-ink-400: #8492a6;
+  /* Paleta Secundaria / Neutros: Azul Marino Profundo (Navy) */
+  --color-ink-50: #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-300: #cbd5e1;
+  --color-ink-400: #94a3b8;
   --color-ink-500: #64748b;
-  --color-ink-600: #4e5b6d;
-  --color-ink-700: #3d4757;
-  --color-ink-800: #2a3240;
-  --color-ink-900: #1b2230;
-  --color-ink-950: #0c1320;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+  --color-ink-950: #080e1a; /* Azul marino medianoche para sidebar */
 }
 
 @layer base {
@@ -46,9 +48,9 @@
 
   ::selection {
     background-color: var(--color-brand-200);
+    color: var(--color-brand-900);
   }
 
-  /* Scrollbar discreto y consistente */
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--color-ink-300) transparent;
@@ -60,6 +62,7 @@
     background-color: white;
     border: 1px solid var(--color-ink-200);
     border-radius: 0.875rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
   }
 
   .focus-ring {
@@ -68,7 +71,7 @@
   .focus-ring:focus-visible {
     box-shadow:
       0 0 0 2px white,
-      0 0 0 4px var(--color-brand-500);
+      0 0 0 4px var(--color-brand-600);
   }
 
   .money {
